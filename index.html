@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#08284c" />
+  <title>Brampton Golf Club Turf Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <div class="logo">BGC</div>
+      <p class="eyebrow">TURF TRACKER</p>
+      <h1>Brampton Golf Club</h1>
+      <label>Email<input id="login-email" type="email" required /></label>
+      <label>Password<input id="login-password" type="password" required /></label>
+      <button type="submit">Sign in</button>
+      <p id="login-message"></p>
+    </form>
+  </section>
+
+  <section id="app-shell" class="hidden">
+    <header class="hero">
+      <div>
+        <p class="eyebrow light">TURF TRACKER</p>
+        <h1>BRAMPTON GOLF CLUB</h1>
+        <p>Grounds Crew Dashboard</p>
+        <div id="connection-pill">✓ Connected to Supabase</div>
+      </div>
+      <button id="sign-out-button" class="signout">Sign out</button>
+    </header>
+    <nav id="nav"></nav>
+    <main id="page"></main>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
