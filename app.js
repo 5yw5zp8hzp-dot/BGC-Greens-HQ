@@ -1,4 +1,5 @@
 const cfg = window.APP_CONFIG;
+
 const db = supabase.createClient(
   cfg.SUPABASE_URL,
   cfg.SUPABASE_ANON_KEY
@@ -7,6 +8,10 @@ const db = supabase.createClient(
 const state = {
   page: "home"
 };
+
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
 
 const navItems = [
   ["home", "Home"],
@@ -21,123 +26,231 @@ const navItems = [
   ["notes", "Notes"]
 ];
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener(
+  "DOMContentLoaded",
+  init
+);
+
+/* =====================================================
+   STARTUP
+   ===================================================== */
 
 async function init() {
   renderNav();
 
   document
     .querySelector("#login-form")
-    .addEventListener("submit", login);
+    .addEventListener(
+      "submit",
+      login
+    );
 
   document
-    .querySelector("#sign-out-button")
-    .addEventListener("click", () => db.auth.signOut());
+    .querySelector(
+      "#sign-out-button"
+    )
+    .addEventListener(
+      "click",
+      () => db.auth.signOut()
+    );
 
-  const { data } = await db.auth.getSession();
+  const { data } =
+    await db.auth.getSession();
 
-  showForSession(data.session);
+  showForSession(
+    data.session
+  );
 
-  db.auth.onAuthStateChange((_event, session) => {
-    showForSession(session);
-  });
+  db.auth.onAuthStateChange(
+    (_event, session) => {
+      showForSession(
+        session
+      );
+    }
+  );
 }
+
+/* =====================================================
+   LOGIN
+   ===================================================== */
 
 async function login(event) {
   event.preventDefault();
 
-  const email = document
-    .querySelector("#login-email")
-    .value
-    .trim();
+  const email =
+    document
+      .querySelector(
+        "#login-email"
+      )
+      .value
+      .trim();
 
-  const password = document
-    .querySelector("#login-password")
-    .value;
+  const password =
+    document
+      .querySelector(
+        "#login-password"
+      )
+      .value;
 
-  const message = document.querySelector("#login-message");
+  const message =
+    document.querySelector(
+      "#login-message"
+    );
 
   message.textContent = "";
 
-  const { error } = await db.auth.signInWithPassword({
-    email,
-    password
-  });
+  const { error } =
+    await db.auth
+      .signInWithPassword({
+        email,
+        password
+      });
 
   if (error) {
-    message.textContent = error.message;
+    message.textContent =
+      error.message;
   }
 }
 
-function showForSession(session) {
+function showForSession(
+  session
+) {
   document
-    .querySelector("#login-screen")
-    .classList.toggle("hidden", !!session);
+    .querySelector(
+      "#login-screen"
+    )
+    .classList
+    .toggle(
+      "hidden",
+      !!session
+    );
 
   document
-    .querySelector("#app-shell")
-    .classList.toggle("hidden", !session);
+    .querySelector(
+      "#app-shell"
+    )
+    .classList
+    .toggle(
+      "hidden",
+      !session
+    );
 
   if (session) {
     renderPage();
   }
 }
 
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
+
 function renderNav() {
-  const nav = document.querySelector("#nav");
-
-  nav.innerHTML = navItems
-    .map(
-      ([key, label]) => `
-        <button
-          data-page="${key}"
-          class="${key === "home" ? "active" : ""}"
-        >
-          ${label}
-        </button>
-      `
-    )
-    .join("");
-
-  nav.addEventListener("click", event => {
-    const button = event.target.closest(
-      "button[data-page]"
+  const nav =
+    document.querySelector(
+      "#nav"
     );
 
-    if (!button) return;
+  nav.innerHTML =
+    navItems
+      .map(
+        ([key, label]) => `
+          <button
+            data-page="${key}"
+            class="${
+              key === "home"
+                ? "active"
+                : ""
+            }"
+          >
+            ${label}
+          </button>
+        `
+      )
+      .join("");
 
-    state.page = button.dataset.page;
+  nav.addEventListener(
+    "click",
+    event => {
+      const button =
+        event.target.closest(
+          "button[data-page]"
+        );
 
-    [...nav.querySelectorAll("button")].forEach(item => {
-      item.classList.toggle(
-        "active",
-        item === button
-      );
-    });
+      if (!button) {
+        return;
+      }
 
-    renderPage();
-  });
+      state.page =
+        button.dataset.page;
+
+      [
+        ...nav.querySelectorAll(
+          "button"
+        )
+      ].forEach(item => {
+        item.classList.toggle(
+          "active",
+          item === button
+        );
+      });
+
+      renderPage();
+    }
+  );
 }
 
+/* =====================================================
+   PAGE ROUTER
+   ===================================================== */
+
 async function renderPage() {
-  const page = document.querySelector("#page");
+  const page =
+    document.querySelector(
+      "#page"
+    );
 
-  if (state.page === "home") {
-    return renderHome(page);
+  if (
+    state.page === "home"
+  ) {
+    return renderHome(
+      page
+    );
   }
 
-  if (state.page === "staff") {
-    return renderStaff(page);
+  if (
+    state.page ===
+    "applications"
+  ) {
+    return renderApplications(
+      page
+    );
   }
 
-  if (state.page === "applications") {
-    return renderApplications(page);
+  if (
+    state.page ===
+    "chemicals"
+  ) {
+    return renderChemicalInventory(
+      page
+    );
   }
 
-  const spec = specs[state.page];
+  if (
+    state.page === "staff"
+  ) {
+    return renderStaff(
+      page
+    );
+  }
+
+  const spec =
+    specs[state.page];
 
   if (spec) {
-    return renderCrud(page, spec);
+    return renderCrud(
+      page,
+      spec
+    );
   }
 }
 
@@ -145,63 +258,123 @@ async function renderPage() {
    HOME
    ===================================================== */
 
-async function renderHome(page) {
+async function renderHome(
+  page
+) {
   const [
     tasks,
     equipment,
     notes,
-    calendar
+    calendar,
+    lowStock
   ] = await Promise.all([
     db
       .from("tasks")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .neq("status", "done"),
+      .select(
+        "*",
+        {
+          count: "exact",
+          head: true
+        }
+      )
+      .neq(
+        "status",
+        "done"
+      ),
 
     db
       .from("equipment")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .eq("status", "down"),
+      .select(
+        "*",
+        {
+          count: "exact",
+          head: true
+        }
+      )
+      .eq(
+        "status",
+        "down"
+      ),
 
     db
-      .from("daily_notes")
+      .from(
+        "daily_notes"
+      )
       .select("*")
-      .order("note_date", {
-        ascending: false
-      })
+      .order(
+        "note_date",
+        {
+          ascending: false
+        }
+      )
       .limit(3),
 
     db
-      .from("calendar_entries")
+      .from(
+        "calendar_entries"
+      )
       .select("*")
       .gte(
         "start_date",
-        new Date()
-          .toISOString()
-          .slice(0, 10)
+        today()
       )
-      .order("start_date")
-      .limit(3)
+      .order(
+        "start_date"
+      )
+      .limit(3),
+
+    db
+      .from(
+        "chemical_products"
+      )
+      .select("*")
+      .order(
+        "quantity"
+      )
   ]);
+
+  const lowProducts =
+    (
+      lowStock.data || []
+    ).filter(product => {
+      if (
+        product
+          .reorder_level ==
+        null
+      ) {
+        return false;
+      }
+
+      return (
+        Number(
+          product.quantity
+        ) <=
+        Number(
+          product
+            .reorder_level
+        )
+      );
+    });
 
   page.innerHTML = `
     <div class="heading">
-      <h2>Home</h2>
+      <h2>
+        Home
+      </h2>
     </div>
 
     <div class="grid">
+
       <div class="card">
         <div class="meta">
           Open tasks
         </div>
 
         <h3>
-          ${tasks.count ?? 0}
+          ${
+            tasks.count ??
+            0
+          }
         </h3>
       </div>
 
@@ -211,58 +384,77 @@ async function renderHome(page) {
         </div>
 
         <h3>
-          ${equipment.count ?? 0}
+          ${
+            equipment.count ??
+            0
+          }
         </h3>
       </div>
 
       <div class="card">
         <div class="meta">
-          Upcoming events
+          Low stock products
         </div>
 
         <h3>
-          ${calendar.data?.length ?? 0}
+          ${
+            lowProducts.length
+          }
         </h3>
       </div>
+
     </div>
 
     <h3>
-      Recent notes
+      Recent Notes
     </h3>
 
-    ${cards(
-      notes.data,
-      row => `
-        <h3>
-          ${esc(row.note_date)}
-        </h3>
+    ${
+      cards(
+        notes.data,
+        row => `
+          <h3>
+            ${esc(
+              row.note_date
+            )}
+          </h3>
 
-        <p>
-          ${esc(row.note_text)}
-        </p>
-      `
-    )}
+          <p>
+            ${esc(
+              row.note_text
+            )}
+          </p>
+        `
+      )
+    }
 
     <h3>
       Upcoming
     </h3>
 
-    ${cards(
-      calendar.data,
-      row => `
-        <h3>
-          ${esc(row.title)}
-        </h3>
+    ${
+      cards(
+        calendar.data,
+        row => `
+          <h3>
+            ${esc(
+              row.title
+            )}
+          </h3>
 
-        <p class="meta">
-          ${esc(row.start_date)}
-          ·
-          ${esc(
-            row.entry_type || "event"
-          )}
-        </p>
-      `
-    )}
+          <p class="meta">
+            ${esc(
+              row.start_date
+            )}
+            ·
+            ${esc(
+              row.entry_type ||
+              "event"
+            )}
+          </p>
+        `
+      )
+    }
   `;
 }
 
@@ -270,25 +462,38 @@ async function renderHome(page) {
    MULTI-PRODUCT APPLICATIONS
    ===================================================== */
 
-async function renderApplications(page) {
+async function renderApplications(
+  page
+) {
   const {
     data: products,
     error: productError
   } = await db
-    .from("chemical_products")
-    .select(
-      "id, product_name, quantity, unit"
+    .from(
+      "chemical_products"
     )
-    .order("product_name");
+    .select(`
+      id,
+      product_name,
+      quantity,
+      unit
+    `)
+    .order(
+      "product_name"
+    );
 
   if (productError) {
     page.innerHTML = `
       <div class="heading">
-        <h2>Applications</h2>
+        <h2>
+          Applications
+        </h2>
       </div>
 
       <div class="empty">
-        ${esc(productError.message)}
+        ${esc(
+          productError.message
+        )}
       </div>
     `;
 
@@ -297,6 +502,7 @@ async function renderApplications(page) {
 
   page.innerHTML = `
     <div class="heading">
+
       <h2>
         Applications
       </h2>
@@ -305,14 +511,16 @@ async function renderApplications(page) {
         id="toggle-application-form"
         class="primary"
       >
-        + New application
+        + New Application
       </button>
+
     </div>
 
     <form
       id="application-form"
       class="form hidden"
     >
+
       <div class="form-grid">
 
         <label>
@@ -322,9 +530,7 @@ async function renderApplications(page) {
             id="application_date"
             type="date"
             required
-            value="${new Date()
-              .toISOString()
-              .slice(0, 10)}"
+            value="${today()}"
           >
         </label>
 
@@ -347,7 +553,7 @@ async function renderApplications(page) {
         </label>
 
         <label>
-          Holes / zone
+          Holes / Zone
 
           <input
             id="application_holes"
@@ -365,11 +571,12 @@ async function renderApplications(page) {
         </label>
 
         <label>
-          Tank count
+          Tank Count
 
           <input
             id="application_tank_count"
             type="number"
+            min="0"
             step="any"
           >
         </label>
@@ -409,7 +616,7 @@ async function renderApplications(page) {
         type="button"
         class="primary"
       >
-        + Add another product
+        + Add Another Product
       </button>
 
       <label>
@@ -421,13 +628,16 @@ async function renderApplications(page) {
       </label>
 
       <button
-        class="primary"
         type="submit"
+        class="primary"
       >
-        Save application
+        Save Application
       </button>
 
-      <p id="application-message"></p>
+      <p
+        id="application-message"
+      ></p>
+
     </form>
 
     <section
@@ -459,9 +669,12 @@ async function renderApplications(page) {
 
   function addProductRow() {
     const row =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
-    row.className = "card";
+    row.className =
+      "card";
 
     row.style.marginBottom =
       "12px";
@@ -476,45 +689,55 @@ async function renderApplications(page) {
             class="application-product-select"
             required
           >
+
             <option value="">
               Choose product…
             </option>
 
-            ${products
-              .map(
-                product => `
-                  <option
-                    value="${product.id}"
-                    data-unit="${esc(
-                      product.unit || ""
-                    )}"
-                    data-stock="${
-                      product.quantity ?? 0
-                    }"
-                  >
-                    ${esc(
-                      product.product_name
-                    )}
-                    —
-                    ${esc(
-                      String(
-                        product.quantity ?? 0
-                      )
-                    )}
-                    ${esc(
-                      product.unit || ""
-                    )}
-                    in stock
-                  </option>
-                `
-              )
-              .join("")}
+            ${
+              products
+                .map(
+                  product => `
+                    <option
+                      value="${product.id}"
+                      data-stock="${
+                        product.quantity ??
+                        0
+                      }"
+                      data-unit="${esc(
+                        product.unit ||
+                        ""
+                      )}"
+                    >
+                      ${esc(
+                        product
+                          .product_name
+                      )}
+                      —
+                      ${esc(
+                        String(
+                          product
+                            .quantity ??
+                          0
+                        )
+                      )}
+                      ${esc(
+                        product.unit ||
+                        ""
+                      )}
+                      available
+                    </option>
+                  `
+                )
+                .join("")
+            }
 
           </select>
+
         </label>
 
         <label>
-          Quantity used
+          Quantity Used
 
           <input
             class="application-product-quantity"
@@ -523,6 +746,7 @@ async function renderApplications(page) {
             step="any"
             required
           >
+
         </label>
 
       </div>
@@ -530,15 +754,14 @@ async function renderApplications(page) {
       <p
         class="meta application-product-help"
       >
-        Select a product to see
-        its unit and available stock.
+        Select a product.
       </p>
 
       <button
         type="button"
         class="delete remove-product-row"
       >
-        Remove product
+        Remove Product
       </button>
     `;
 
@@ -556,11 +779,15 @@ async function renderApplications(page) {
       "change",
       () => {
         const option =
-          select.selectedOptions[0];
+          select
+            .selectedOptions[0];
 
-        if (!option?.value) {
+        if (
+          !option ||
+          !option.value
+        ) {
           help.textContent =
-            "Select a product to see its unit and available stock.";
+            "Select a product.";
 
           return;
         }
@@ -580,7 +807,9 @@ async function renderApplications(page) {
         "click",
         () => {
           if (
-            productRows.children.length === 1
+            productRows
+              .children
+              .length <= 1
           ) {
             return;
           }
@@ -589,7 +818,8 @@ async function renderApplications(page) {
         }
       );
 
-    productRows.appendChild(row);
+    productRows
+      .appendChild(row);
   }
 
   addProductRow();
@@ -609,15 +839,20 @@ async function renderApplications(page) {
     )
     .addEventListener(
       "submit",
-      event =>
+      event => {
         saveApplication(
           event,
           products
-        )
+        );
+      }
     );
 
   await loadApplications();
 }
+
+/* =====================================================
+   SAVE APPLICATION
+   ===================================================== */
 
 async function saveApplication(
   event,
@@ -630,53 +865,65 @@ async function saveApplication(
       "#application-message"
     );
 
-  message.textContent = "";
+  message.textContent =
+    "";
 
-  const productRows = [
-    ...document.querySelectorAll(
-      "#application-product-rows > .card"
-    )
+  const rows = [
+    ...document
+      .querySelectorAll(
+        "#application-product-rows > .card"
+      )
   ];
 
-  if (!productRows.length) {
+  if (!rows.length) {
     message.textContent =
       "Add at least one product.";
 
     return;
   }
 
-  const selectedProducts = [];
+  const selectedProducts =
+    [];
 
-  for (const row of productRows) {
+  for (
+    const row of rows
+  ) {
     const productId =
-      row.querySelector(
-        ".application-product-select"
-      ).value;
+      row
+        .querySelector(
+          ".application-product-select"
+        )
+        .value;
 
     const quantity =
       Number(
-        row.querySelector(
-          ".application-product-quantity"
-        ).value
+        row
+          .querySelector(
+            ".application-product-quantity"
+          )
+          .value
       );
 
     if (
       !productId ||
-      !Number.isFinite(quantity) ||
+      !Number.isFinite(
+        quantity
+      ) ||
       quantity <= 0
     ) {
       message.textContent =
-        "Each product needs a valid quantity greater than zero.";
+        "Each product needs a quantity greater than zero.";
 
       return;
     }
 
     if (
-      selectedProducts.some(
-        item =>
-          item.product_id ===
-          productId
-      )
+      selectedProducts
+        .some(
+          item =>
+            item.product_id ===
+            productId
+        )
     ) {
       message.textContent =
         "The same product is listed more than once. Combine it into one quantity.";
@@ -687,13 +934,15 @@ async function saveApplication(
     const product =
       products.find(
         item =>
-          item.id === productId
+          item.id ===
+          productId
       );
 
     if (
       product &&
-      Number(product.quantity) <
-        quantity
+      Number(
+        product.quantity
+      ) < quantity
     ) {
       message.textContent =
         `Not enough ${product.product_name}. ` +
@@ -704,16 +953,21 @@ async function saveApplication(
     }
 
     selectedProducts.push({
-      product_id: productId,
-      quantity_used: quantity
+      product_id:
+        productId,
+
+      quantity_used:
+        quantity
     });
   }
 
-  const applicationPayload = {
+  const payload = {
     application_date:
-      document.querySelector(
-        "#application_date"
-      ).value,
+      document
+        .querySelector(
+          "#application_date"
+        )
+        .value,
 
     course:
       nullable(
@@ -758,16 +1012,16 @@ async function saveApplication(
 
   const {
     data: application,
-    error: applicationError
+    error
   } = await db
     .from("applications")
-    .insert(applicationPayload)
+    .insert(payload)
     .select()
     .single();
 
-  if (applicationError) {
+  if (error) {
     message.textContent =
-      applicationError.message;
+      error.message;
 
     return;
   }
@@ -776,25 +1030,47 @@ async function saveApplication(
     const product of
     selectedProducts
   ) {
-    const { error } =
+    const {
+      error: productError
+    } = await db
+      .from(
+        "application_products"
+      )
+      .insert({
+        application_id:
+          application.id,
+
+        product_id:
+          product.product_id,
+
+        quantity_used:
+          product.quantity_used
+      });
+
+    if (productError) {
+      /*
+        Remove any product rows that
+        were already inserted first.
+
+        Their database trigger restores
+        inventory before the application
+        itself is deleted.
+      */
+
       await db
         .from(
           "application_products"
         )
-        .insert({
-          application_id:
-            application.id,
+        .delete()
+        .eq(
+          "application_id",
+          application.id
+        );
 
-          product_id:
-            product.product_id,
-
-          quantity_used:
-            product.quantity_used
-        });
-
-    if (error) {
       await db
-        .from("applications")
+        .from(
+          "applications"
+        )
         .delete()
         .eq(
           "id",
@@ -802,7 +1078,7 @@ async function saveApplication(
         );
 
       message.textContent =
-        error.message;
+        productError.message;
 
       return;
     }
@@ -810,12 +1086,12 @@ async function saveApplication(
 
   event.target.reset();
 
-  document.querySelector(
-    "#application_date"
-  ).value =
-    new Date()
-      .toISOString()
-      .slice(0, 10);
+  document
+    .querySelector(
+      "#application_date"
+    )
+    .value =
+    today();
 
   document
     .querySelector(
@@ -826,6 +1102,10 @@ async function saveApplication(
 
   await loadApplications();
 }
+
+/* =====================================================
+   LOAD APPLICATIONS
+   ===================================================== */
 
 async function loadApplications() {
   const box =
@@ -856,10 +1136,12 @@ async function loadApplications() {
       wind_kmh,
       notes,
       created_at,
+
       application_products (
         id,
         quantity_used,
         product_id,
+
         chemical_products (
           product_name,
           unit
@@ -869,20 +1151,24 @@ async function loadApplications() {
     .order(
       "application_date",
       {
-        ascending: false
+        ascending:
+          false
       }
     )
     .order(
       "created_at",
       {
-        ascending: false
+        ascending:
+          false
       }
     );
 
   if (error) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(error.message)}
+        ${esc(
+          error.message
+        )}
       </div>
     `;
 
@@ -901,175 +1187,180 @@ async function loadApplications() {
 
   box.innerHTML =
     data
-      .map(application => {
-        const products =
-          application
-            .application_products ||
-          [];
+      .map(
+        application => {
+          const products =
+            application
+              .application_products ||
+            [];
 
-        return `
-          <article
-            class="card row"
-          >
-            <div>
+          return `
+            <article
+              class="card row"
+            >
 
-              <h3>
-                ${esc(
+              <div>
+
+                <h3>
+                  ${esc(
+                    application
+                      .application_date
+                  )}
+                </h3>
+
+                <p class="meta">
+                  ${esc(
+                    [
+                      application
+                        .course,
+
+                      application
+                        .area,
+
+                      application
+                        .holes
+                    ]
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " · "
+                      )
+                  )}
+                </p>
+
+                <p>
+                  ${
+                    products
+                      .map(
+                        item => {
+                          const chemical =
+                            item
+                              .chemical_products;
+
+                          return `
+                            <span class="tag">
+                              ${esc(
+                                chemical
+                                  ?.product_name ||
+                                "Product"
+                              )}
+                              —
+                              ${esc(
+                                String(
+                                  item
+                                    .quantity_used
+                                )
+                              )}
+                              ${esc(
+                                chemical
+                                  ?.unit ||
+                                ""
+                              )}
+                            </span>
+                          `;
+                        }
+                      )
+                      .join(" ")
+                  }
+                </p>
+
+                ${
                   application
-                    .application_date
-                )}
-              </h3>
-
-              <p class="meta">
-                ${esc(
-                  [
-                    application.course,
-                    application.area,
-                    application.holes
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                )}
-              </p>
-
-              <p>
-                ${products
-                  .map(product => {
-                    const chem =
-                      product
-                        .chemical_products;
-
-                    return `
-                      <span class="tag">
+                    .applicator_name
+                    ? `
+                      <p>
+                        Applicator:
                         ${esc(
-                          chem
-                            ?.product_name ||
-                          "Product"
+                          application
+                            .applicator_name
                         )}
-                        —
+                      </p>
+                    `
+                    : ""
+                }
+
+                ${
+                  application
+                    .tank_count !=
+                  null
+                    ? `
+                      <p>
+                        Tanks:
                         ${esc(
                           String(
-                            product
-                              .quantity_used
+                            application
+                              .tank_count
                           )
                         )}
-                        ${esc(
-                          chem?.unit ||
-                          ""
-                        )}
-                      </span>
-                    `;
-                  })
-                  .join(" ")}
-              </p>
+                      </p>
+                    `
+                    : ""
+                }
 
-              ${
-                application
-                  .applicator_name
-                  ? `
-                    <p>
-                      Applicator:
-                      ${esc(
-                        application
-                          .applicator_name
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-              ${
-                application
-                  .tank_count != null
-                  ? `
-                    <p>
-                      Tanks:
-                      ${esc(
-                        String(
-                          application
-                            .tank_count
-                        )
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-              ${
-                application
+                ${
+                  application
                     .temperature_c !=
-                    null ||
-                application
+                    null
+                    ? `
+                      <p class="meta">
+                        Temperature:
+                        ${esc(
+                          String(
+                            application
+                              .temperature_c
+                          )
+                        )}°C
+                      </p>
+                    `
+                    : ""
+                }
+
+                ${
+                  application
                     .wind_kmh !=
                     null
-                  ? `
-                    <p class="meta">
+                    ? `
+                      <p class="meta">
+                        Wind:
+                        ${esc(
+                          String(
+                            application
+                              .wind_kmh
+                          )
+                        )}
+                        km/h
+                      </p>
+                    `
+                    : ""
+                }
 
-                      ${
-                        application
-                          .temperature_c !=
-                        null
-                          ? `${esc(
-                              String(
-                                application
-                                  .temperature_c
-                              )
-                            )}°C`
-                          : ""
-                      }
+                ${
+                  application.notes
+                    ? `
+                      <p>
+                        ${esc(
+                          application
+                            .notes
+                        )}
+                      </p>
+                    `
+                    : ""
+                }
 
-                      ${
-                        application
-                            .temperature_c !=
-                            null &&
-                        application
-                            .wind_kmh !=
-                            null
-                          ? " · "
-                          : ""
-                      }
+              </div>
 
-                      ${
-                        application
-                          .wind_kmh !=
-                        null
-                          ? `${esc(
-                              String(
-                                application
-                                  .wind_kmh
-                              )
-                            )} km/h wind`
-                          : ""
-                      }
+              <button
+                class="delete delete-application"
+                data-id="${application.id}"
+              >
+                Delete
+              </button>
 
-                    </p>
-                  `
-                  : ""
-              }
-
-              ${
-                application.notes
-                  ? `
-                    <p>
-                      ${esc(
-                        application.notes
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-            </div>
-
-            <button
-              class="delete delete-application"
-              data-id="${application.id}"
-            >
-              Delete
-            </button>
-          </article>
-        `;
-      })
+            </article>
+          `;
+        }
+      )
       .join("");
 
   box
@@ -1080,25 +1371,67 @@ async function loadApplications() {
       button.addEventListener(
         "click",
         async () => {
+          const appId =
+            button.dataset.id;
+
           if (
             !confirm(
-              "Delete this application? Its product quantities will be returned to inventory."
+              "Delete this application? The products will be returned to inventory."
             )
           ) {
             return;
           }
 
-          const { error } =
-            await db
-              .from("applications")
-              .delete()
-              .eq(
-                "id",
-                button.dataset.id
-              );
+          /*
+            Explicitly delete application
+            products FIRST so inventory
+            transactions are restored.
+          */
 
-          if (error) {
-            alert(error.message);
+          const {
+            error:
+              productDeleteError
+          } = await db
+            .from(
+              "application_products"
+            )
+            .delete()
+            .eq(
+              "application_id",
+              appId
+            );
+
+          if (
+            productDeleteError
+          ) {
+            alert(
+              productDeleteError
+                .message
+            );
+
+            return;
+          }
+
+          const {
+            error:
+              applicationDeleteError
+          } = await db
+            .from(
+              "applications"
+            )
+            .delete()
+            .eq(
+              "id",
+              appId
+            );
+
+          if (
+            applicationDeleteError
+          ) {
+            alert(
+              applicationDeleteError
+                .message
+            );
 
             return;
           }
@@ -1110,13 +1443,1205 @@ async function loadApplications() {
 }
 
 /* =====================================================
-   OTHER PAGES
+   CHEMICAL INVENTORY
+   ===================================================== */
+
+async function renderChemicalInventory(
+  page
+) {
+  const {
+    data: products,
+    error
+  } = await db
+    .from(
+      "chemical_products"
+    )
+    .select("*")
+    .order(
+      "product_name"
+    );
+
+  if (error) {
+    page.innerHTML = `
+      <div class="heading">
+        <h2>
+          Chemical Inventory
+        </h2>
+      </div>
+
+      <div class="empty">
+        ${esc(
+          error.message
+        )}
+      </div>
+    `;
+
+    return;
+  }
+
+  page.innerHTML = `
+    <div class="heading">
+
+      <h2>
+        Chemical Inventory
+      </h2>
+
+    </div>
+
+    <div
+      style="
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        margin-bottom:20px;
+      "
+    >
+
+      <button
+        id="show-add-product"
+        class="primary"
+      >
+        + Add Product
+      </button>
+
+      <button
+        id="show-receive-stock"
+        class="primary"
+      >
+        + Receive Inventory
+      </button>
+
+      <button
+        id="show-adjust-stock"
+        class="primary"
+      >
+        Adjust Inventory
+      </button>
+
+    </div>
+
+    ${
+      addChemicalForm()
+    }
+
+    ${
+      receiveInventoryForm(
+        products
+      )
+    }
+
+    ${
+      adjustInventoryForm(
+        products
+      )
+    }
+
+    <section
+      id="chemical-list"
+      class="list"
+    ></section>
+
+    <h3>
+      Recent Inventory Activity
+    </h3>
+
+    <section
+      id="inventory-history"
+      class="list"
+    ></section>
+  `;
+
+  document
+    .querySelector(
+      "#show-add-product"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        hideInventoryForms();
+
+        document
+          .querySelector(
+            "#add-product-form"
+          )
+          .classList
+          .remove("hidden");
+      }
+    );
+
+  document
+    .querySelector(
+      "#show-receive-stock"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        hideInventoryForms();
+
+        document
+          .querySelector(
+            "#receive-stock-form"
+          )
+          .classList
+          .remove("hidden");
+      }
+    );
+
+  document
+    .querySelector(
+      "#show-adjust-stock"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        hideInventoryForms();
+
+        document
+          .querySelector(
+            "#adjust-stock-form"
+          )
+          .classList
+          .remove("hidden");
+      }
+    );
+
+  document
+    .querySelector(
+      "#add-product-form"
+    )
+    .addEventListener(
+      "submit",
+      saveNewChemical
+    );
+
+  document
+    .querySelector(
+      "#receive-stock-form"
+    )
+    .addEventListener(
+      "submit",
+      receiveInventory
+    );
+
+  document
+    .querySelector(
+      "#adjust-stock-form"
+    )
+    .addEventListener(
+      "submit",
+      adjustInventory
+    );
+
+  renderChemicalCards(
+    products
+  );
+
+  await loadInventoryHistory();
+}
+
+/* =====================================================
+   INVENTORY FORMS
+   ===================================================== */
+
+function hideInventoryForms() {
+  [
+    "#add-product-form",
+    "#receive-stock-form",
+    "#adjust-stock-form"
+  ].forEach(selector => {
+    document
+      .querySelector(
+        selector
+      )
+      ?.classList
+      .add("hidden");
+  });
+}
+
+/* =====================================================
+   ADD NEW CHEMICAL
+   ===================================================== */
+
+function addChemicalForm() {
+  return `
+    <form
+      id="add-product-form"
+      class="form hidden"
+    >
+
+      <h3>
+        Add Chemical Product
+      </h3>
+
+      <div class="form-grid">
+
+        <label>
+          Product Name
+
+          <input
+            id="new_product_name"
+            required
+          >
+        </label>
+
+        <label>
+          Product Type
+
+          <select
+            id="new_product_type"
+          >
+            <option value="fungicide">
+              Fungicide
+            </option>
+
+            <option value="herbicide">
+              Herbicide
+            </option>
+
+            <option value="insecticide">
+              Insecticide
+            </option>
+
+            <option value="fertilizer">
+              Fertilizer
+            </option>
+
+            <option value="wetting_agent">
+              Wetting Agent
+            </option>
+
+            <option value="growth_regulator">
+              Growth Regulator
+            </option>
+
+            <option value="other">
+              Other
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Manufacturer
+
+          <input
+            id="new_manufacturer"
+          >
+        </label>
+
+        <label>
+          Unit
+
+          <select
+            id="new_unit"
+          >
+            <option value="L">
+              Litres
+            </option>
+
+            <option value="mL">
+              Millilitres
+            </option>
+
+            <option value="kg">
+              Kilograms
+            </option>
+
+            <option value="g">
+              Grams
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Storage Location
+
+          <input
+            id="new_storage_location"
+          >
+        </label>
+
+        <label>
+          Low Stock Level
+
+          <input
+            id="new_reorder_level"
+            type="number"
+            min="0"
+            step="any"
+          >
+        </label>
+
+      </div>
+
+      <p class="meta">
+        New products start at 0 inventory.
+        Use Receive Inventory after creating the product.
+      </p>
+
+      <button
+        type="submit"
+        class="primary"
+      >
+        Add Product
+      </button>
+
+      <p
+        id="add-product-message"
+      ></p>
+
+    </form>
+  `;
+}
+
+async function saveNewChemical(
+  event
+) {
+  event.preventDefault();
+
+  const message =
+    document.querySelector(
+      "#add-product-message"
+    );
+
+  message.textContent =
+    "";
+
+  const payload = {
+    product_name:
+      document
+        .querySelector(
+          "#new_product_name"
+        )
+        .value
+        .trim(),
+
+    product_type:
+      nullable(
+        "new_product_type"
+      ),
+
+    manufacturer:
+      nullable(
+        "new_manufacturer"
+      ),
+
+    quantity: 0,
+
+    unit:
+      document
+        .querySelector(
+          "#new_unit"
+        )
+        .value,
+
+    storage_location:
+      nullable(
+        "new_storage_location"
+      ),
+
+    reorder_level:
+      nullableNumber(
+        "new_reorder_level"
+      )
+  };
+
+  const { error } =
+    await db
+      .from(
+        "chemical_products"
+      )
+      .insert(payload);
+
+  if (error) {
+    message.textContent =
+      error.message;
+
+    return;
+  }
+
+  await renderChemicalInventory(
+    document.querySelector(
+      "#page"
+    )
+  );
+}
+
+/* =====================================================
+   RECEIVE INVENTORY
+   ===================================================== */
+
+function receiveInventoryForm(
+  products
+) {
+  return `
+    <form
+      id="receive-stock-form"
+      class="form hidden"
+    >
+
+      <h3>
+        Receive Inventory
+      </h3>
+
+      <div class="form-grid">
+
+        <label>
+          Product
+
+          <select
+            id="receive_product_id"
+            required
+          >
+
+            <option value="">
+              Choose product…
+            </option>
+
+            ${
+              productOptions(
+                products
+              )
+            }
+
+          </select>
+        </label>
+
+        <label>
+          Quantity Received
+
+          <input
+            id="receive_quantity"
+            type="number"
+            min="0"
+            step="any"
+            required
+          >
+        </label>
+
+        <label>
+          Date Received
+
+          <input
+            id="receive_date"
+            type="date"
+            required
+            value="${today()}"
+          >
+        </label>
+
+        <label>
+          Supplier
+
+          <input
+            id="receive_supplier"
+          >
+        </label>
+
+      </div>
+
+      <label>
+        Notes
+
+        <textarea
+          id="receive_notes"
+        ></textarea>
+      </label>
+
+      <button
+        type="submit"
+        class="primary"
+      >
+        Receive Inventory
+      </button>
+
+      <p
+        id="receive-message"
+      ></p>
+
+    </form>
+  `;
+}
+
+async function receiveInventory(
+  event
+) {
+  event.preventDefault();
+
+  const message =
+    document.querySelector(
+      "#receive-message"
+    );
+
+  message.textContent =
+    "";
+
+  const quantity =
+    Number(
+      document
+        .querySelector(
+          "#receive_quantity"
+        )
+        .value
+    );
+
+  if (
+    !Number.isFinite(
+      quantity
+    ) ||
+    quantity <= 0
+  ) {
+    message.textContent =
+      "Quantity must be greater than zero.";
+
+    return;
+  }
+
+  const payload = {
+    product_id:
+      document
+        .querySelector(
+          "#receive_product_id"
+        )
+        .value,
+
+    transaction_type:
+      "delivery",
+
+    quantity_change:
+      quantity,
+
+    transaction_date:
+      document
+        .querySelector(
+          "#receive_date"
+        )
+        .value,
+
+    supplier:
+      nullable(
+        "receive_supplier"
+      ),
+
+    reason:
+      "Inventory received",
+
+    notes:
+      nullable(
+        "receive_notes"
+      )
+  };
+
+  const { error } =
+    await db
+      .from(
+        "inventory_transactions"
+      )
+      .insert(payload);
+
+  if (error) {
+    message.textContent =
+      error.message;
+
+    return;
+  }
+
+  await renderChemicalInventory(
+    document.querySelector(
+      "#page"
+    )
+  );
+}
+
+/* =====================================================
+   ADJUST INVENTORY
+   ===================================================== */
+
+function adjustInventoryForm(
+  products
+) {
+  return `
+    <form
+      id="adjust-stock-form"
+      class="form hidden"
+    >
+
+      <h3>
+        Adjust Inventory
+      </h3>
+
+      <p class="meta">
+        Enter a positive number to add inventory.
+        Enter a negative number to remove inventory.
+      </p>
+
+      <div class="form-grid">
+
+        <label>
+          Product
+
+          <select
+            id="adjust_product_id"
+            required
+          >
+
+            <option value="">
+              Choose product…
+            </option>
+
+            ${
+              productOptions(
+                products
+              )
+            }
+
+          </select>
+        </label>
+
+        <label>
+          Adjustment
+
+          <input
+            id="adjust_quantity"
+            type="number"
+            step="any"
+            required
+            placeholder="-2 or 4"
+          >
+        </label>
+
+        <label>
+          Date
+
+          <input
+            id="adjust_date"
+            type="date"
+            required
+            value="${today()}"
+          >
+        </label>
+
+        <label>
+          Reason
+
+          <select
+            id="adjust_reason"
+          >
+            <option
+              value="Physical count correction"
+            >
+              Physical count correction
+            </option>
+
+            <option
+              value="Spill / waste"
+            >
+              Spill / waste
+            </option>
+
+            <option
+              value="Damaged container"
+            >
+              Damaged container
+            </option>
+
+            <option
+              value="Returned product"
+            >
+              Returned product
+            </option>
+
+            <option
+              value="Transfer"
+            >
+              Transfer
+            </option>
+
+            <option
+              value="Other"
+            >
+              Other
+            </option>
+          </select>
+        </label>
+
+      </div>
+
+      <label>
+        Notes
+
+        <textarea
+          id="adjust_notes"
+        ></textarea>
+      </label>
+
+      <button
+        type="submit"
+        class="primary"
+      >
+        Save Adjustment
+      </button>
+
+      <p
+        id="adjust-message"
+      ></p>
+
+    </form>
+  `;
+}
+
+async function adjustInventory(
+  event
+) {
+  event.preventDefault();
+
+  const message =
+    document.querySelector(
+      "#adjust-message"
+    );
+
+  message.textContent =
+    "";
+
+  const quantity =
+    Number(
+      document
+        .querySelector(
+          "#adjust_quantity"
+        )
+        .value
+    );
+
+  if (
+    !Number.isFinite(
+      quantity
+    ) ||
+    quantity === 0
+  ) {
+    message.textContent =
+      "Adjustment cannot be zero.";
+
+    return;
+  }
+
+  const payload = {
+    product_id:
+      document
+        .querySelector(
+          "#adjust_product_id"
+        )
+        .value,
+
+    transaction_type:
+      "adjustment",
+
+    quantity_change:
+      quantity,
+
+    transaction_date:
+      document
+        .querySelector(
+          "#adjust_date"
+        )
+        .value,
+
+    reason:
+      document
+        .querySelector(
+          "#adjust_reason"
+        )
+        .value,
+
+    notes:
+      nullable(
+        "adjust_notes"
+      )
+  };
+
+  const { error } =
+    await db
+      .from(
+        "inventory_transactions"
+      )
+      .insert(payload);
+
+  if (error) {
+    message.textContent =
+      error.message;
+
+    return;
+  }
+
+  await renderChemicalInventory(
+    document.querySelector(
+      "#page"
+    )
+  );
+}
+
+/* =====================================================
+   CHEMICAL CARDS
+   ===================================================== */
+
+function renderChemicalCards(
+  products
+) {
+  const box =
+    document.querySelector(
+      "#chemical-list"
+    );
+
+  if (!products?.length) {
+    box.innerHTML = `
+      <div class="empty">
+        No chemicals in inventory.
+      </div>
+    `;
+
+    return;
+  }
+
+  box.innerHTML =
+    products
+      .map(product => {
+        const low =
+          product
+            .reorder_level !=
+            null &&
+          Number(
+            product.quantity
+          ) <=
+          Number(
+            product
+              .reorder_level
+          );
+
+        return `
+          <article class="card">
+
+            <h3>
+              ${esc(
+                product
+                  .product_name
+              )}
+            </h3>
+
+            <p>
+
+              <span class="tag">
+                ${esc(
+                  String(
+                    product
+                      .quantity ??
+                    0
+                  )
+                )}
+                ${esc(
+                  product.unit ||
+                  ""
+                )}
+              </span>
+
+              ${
+                low
+                  ? `
+                    <span
+                      class="tag"
+                    >
+                      LOW STOCK
+                    </span>
+                  `
+                  : ""
+              }
+
+            </p>
+
+            <p class="meta">
+              ${esc(
+                [
+                  product
+                    .product_type,
+
+                  product
+                    .manufacturer,
+
+                  product
+                    .storage_location
+                ]
+                  .filter(
+                    Boolean
+                  )
+                  .join(
+                    " · "
+                  )
+              )}
+            </p>
+
+            ${
+              product
+                .reorder_level !=
+                null
+                ? `
+                  <p class="meta">
+                    Low stock warning:
+                    ${esc(
+                      String(
+                        product
+                          .reorder_level
+                      )
+                    )}
+                    ${esc(
+                      product.unit ||
+                      ""
+                    )}
+                  </p>
+                `
+                : ""
+            }
+
+          </article>
+        `;
+      })
+      .join("");
+}
+
+/* =====================================================
+   INVENTORY HISTORY
+   ===================================================== */
+
+async function loadInventoryHistory() {
+  const box =
+    document.querySelector(
+      "#inventory-history"
+    );
+
+  box.innerHTML = `
+    <div class="empty">
+      Loading inventory activity…
+    </div>
+  `;
+
+  const {
+    data,
+    error
+  } = await db
+    .from(
+      "inventory_transactions"
+    )
+    .select(`
+      id,
+      transaction_type,
+      quantity_change,
+      transaction_date,
+      supplier,
+      reason,
+      notes,
+      created_at,
+
+      chemical_products (
+        product_name,
+        unit
+      )
+    `)
+    .order(
+      "transaction_date",
+      {
+        ascending:
+          false
+      }
+    )
+    .order(
+      "created_at",
+      {
+        ascending:
+          false
+      }
+    )
+    .limit(50);
+
+  if (error) {
+    box.innerHTML = `
+      <div class="empty">
+        ${esc(
+          error.message
+        )}
+      </div>
+    `;
+
+    return;
+  }
+
+  if (!data?.length) {
+    box.innerHTML = `
+      <div class="empty">
+        No inventory activity yet.
+      </div>
+    `;
+
+    return;
+  }
+
+  box.innerHTML =
+    data
+      .map(
+        transaction => {
+          const product =
+            transaction
+              .chemical_products;
+
+          const change =
+            Number(
+              transaction
+                .quantity_change
+            );
+
+          return `
+            <article class="card">
+
+              <h3>
+                ${esc(
+                  product
+                    ?.product_name ||
+                  "Product"
+                )}
+              </h3>
+
+              <p>
+                <span class="tag">
+
+                  ${
+                    change > 0
+                      ? "+"
+                      : ""
+                  }
+
+                  ${esc(
+                    String(
+                      change
+                    )
+                  )}
+
+                  ${esc(
+                    product
+                      ?.unit ||
+                    ""
+                  )}
+
+                </span>
+              </p>
+
+              <p class="meta">
+                ${esc(
+                  transaction
+                    .transaction_date
+                )}
+                ·
+                ${esc(
+                  humanize(
+                    transaction
+                      .transaction_type
+                  )
+                )}
+              </p>
+
+              ${
+                transaction
+                  .supplier
+                  ? `
+                    <p>
+                      Supplier:
+                      ${esc(
+                        transaction
+                          .supplier
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
+
+              ${
+                transaction
+                  .reason
+                  ? `
+                    <p>
+                      ${esc(
+                        transaction
+                          .reason
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
+
+              ${
+                transaction
+                  .notes
+                  ? `
+                    <p class="meta">
+                      ${esc(
+                        transaction
+                          .notes
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
+
+            </article>
+          `;
+        }
+      )
+      .join("");
+}
+
+/* =====================================================
+   PRODUCT OPTION HELPER
+   ===================================================== */
+
+function productOptions(
+  products
+) {
+  return products
+    .map(
+      product => `
+        <option
+          value="${product.id}"
+        >
+          ${esc(
+            product
+              .product_name
+          )}
+          —
+          ${esc(
+            String(
+              product.quantity ??
+              0
+            )
+          )}
+          ${esc(
+            product.unit ||
+            ""
+          )}
+        </option>
+      `
+    )
+    .join("");
+}
+
+/* =====================================================
+   STANDARD PAGES
    ===================================================== */
 
 const specs = {
+
+  /* -------------------------
+     TASKS
+     ------------------------- */
+
   tasks: {
     title: "Tasks",
+
     table: "tasks",
+
     order: "created_at",
 
     fields: [
@@ -1125,36 +2650,80 @@ const specs = {
         "Title",
         "text"
       ],
+
       [
         "course",
         "Course",
         "text"
       ],
+
       [
         "area",
         "Area",
         "text"
       ],
+
       [
         "assigned_to",
-        "Assigned to",
+        "Assigned To",
         "text"
       ],
+
       [
         "priority",
         "Priority",
-        "text"
+        "select",
+        [
+          [
+            "low",
+            "Low"
+          ],
+
+          [
+            "medium",
+            "Medium"
+          ],
+
+          [
+            "high",
+            "High"
+          ],
+
+          [
+            "urgent",
+            "Urgent"
+          ]
+        ]
       ],
+
       [
         "status",
         "Status",
-        "text"
+        "select",
+        [
+          [
+            "open",
+            "Open"
+          ],
+
+          [
+            "in_progress",
+            "In Progress"
+          ],
+
+          [
+            "done",
+            "Done"
+          ]
+        ]
       ],
+
       [
         "due_date",
-        "Due date",
+        "Due Date",
         "date"
       ],
+
       [
         "description",
         "Description",
@@ -1164,7 +2733,9 @@ const specs = {
 
     display: row => `
       <h3>
-        ${esc(row.title)}
+        ${esc(
+          row.title
+        )}
       </h3>
 
       <p class="meta">
@@ -1179,21 +2750,49 @@ const specs = {
         )}
       </p>
 
-      <p>
-        ${esc(
-          row.description || ""
-        )}
-      </p>
+      ${
+        row.description
+          ? `
+            <p>
+              ${esc(
+                row.description
+              )}
+            </p>
+          `
+          : ""
+      }
 
-      <span class="tag">
-        ${esc(row.status)}
-      </span>
+      <p>
+        <span class="tag">
+          ${esc(
+            humanize(
+              row.priority ||
+              "medium"
+            )
+          )}
+        </span>
+
+        <span class="tag">
+          ${esc(
+            humanize(
+              row.status ||
+              "open"
+            )
+          )}
+        </span>
+      </p>
     `
   },
 
+  /* -------------------------
+     JOB BOARD
+     ------------------------- */
+
   jobs: {
     title: "Job Board",
+
     table: "jobs",
+
     order: "created_at",
 
     fields: [
@@ -1202,41 +2801,86 @@ const specs = {
         "Title",
         "text"
       ],
+
       [
         "job_type",
-        "Job type",
+        "Job Type",
         "text"
       ],
+
       [
         "course",
         "Course",
         "text"
       ],
+
       [
         "area",
         "Area",
         "text"
       ],
+
       [
         "assigned_to",
-        "Assigned to",
+        "Assigned To",
         "text"
       ],
+
       [
         "priority",
         "Priority",
-        "text"
+        "select",
+        [
+          [
+            "low",
+            "Low"
+          ],
+
+          [
+            "medium",
+            "Medium"
+          ],
+
+          [
+            "high",
+            "High"
+          ],
+
+          [
+            "urgent",
+            "Urgent"
+          ]
+        ]
       ],
+
       [
         "status",
         "Status",
-        "text"
+        "select",
+        [
+          [
+            "open",
+            "Open"
+          ],
+
+          [
+            "in_progress",
+            "In Progress"
+          ],
+
+          [
+            "done",
+            "Done"
+          ]
+        ]
       ],
+
       [
         "due_date",
-        "Due date",
+        "Due Date",
         "date"
       ],
+
       [
         "description",
         "Description",
@@ -1246,7 +2890,9 @@ const specs = {
 
     display: row => `
       <h3>
-        ${esc(row.title)}
+        ${esc(
+          row.title
+        )}
       </h3>
 
       <p class="meta">
@@ -1254,119 +2900,51 @@ const specs = {
           [
             row.job_type,
             row.course,
-            row.area
+            row.area,
+            row.assigned_to
           ]
             .filter(Boolean)
             .join(" · ")
         )}
       </p>
 
+      ${
+        row.description
+          ? `
+            <p>
+              ${esc(
+                row.description
+              )}
+            </p>
+          `
+          : ""
+      }
+
       <p>
-        ${esc(
-          row.description || ""
-        )}
+        <span class="tag">
+          ${esc(
+            humanize(
+              row.status ||
+              "open"
+            )
+          )}
+        </span>
       </p>
     `
   },
 
-  chemicals: {
-    title: "Chemical Inventory",
-    table: "chemical_products",
-    order: "product_name",
-
-    fields: [
-      [
-        "product_name",
-        "Product name",
-        "text"
-      ],
-      [
-        "product_type",
-        "Product type",
-        "text"
-      ],
-      [
-        "manufacturer",
-        "Manufacturer",
-        "text"
-      ],
-      [
-        "quantity",
-        "Quantity",
-        "number"
-      ],
-      [
-        "unit",
-        "Unit",
-        "text"
-      ],
-      [
-        "storage_location",
-        "Storage location",
-        "text"
-      ],
-      [
-        "reorder_level",
-        "Reorder level",
-        "number"
-      ]
-    ],
-
-    display: row => {
-      const low =
-        row.reorder_level != null &&
-        Number(row.quantity) <=
-          Number(row.reorder_level);
-
-      return `
-        <h3>
-          ${esc(
-            row.product_name
-          )}
-        </h3>
-
-        <p>
-          <span class="tag">
-            ${esc(
-              String(
-                row.quantity ?? 0
-              )
-            )}
-            ${esc(
-              row.unit || ""
-            )}
-          </span>
-
-          ${
-            low
-              ? `
-                <span class="tag">
-                  LOW STOCK
-                </span>
-              `
-              : ""
-          }
-        </p>
-
-        <p class="meta">
-          ${esc(
-            [
-              row.product_type,
-              row.manufacturer,
-              row.storage_location
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          )}
-        </p>
-      `;
-    }
-  },
+  /* -------------------------
+     CALENDAR
+     ------------------------- */
 
   calendar: {
     title: "Calendar",
-    table: "calendar_entries",
-    order: "start_date",
+
+    table:
+      "calendar_entries",
+
+    order:
+      "start_date",
 
     fields: [
       [
@@ -1374,26 +2952,62 @@ const specs = {
         "Title",
         "text"
       ],
+
       [
         "entry_type",
-        "Entry type",
-        "text"
+        "Entry Type",
+        "select",
+        [
+          [
+            "event",
+            "Event"
+          ],
+
+          [
+            "staff_day_off",
+            "Staff Day Off"
+          ],
+
+          [
+            "maintenance",
+            "Maintenance"
+          ],
+
+          [
+            "tournament",
+            "Tournament"
+          ],
+
+          [
+            "delivery",
+            "Delivery"
+          ],
+
+          [
+            "other",
+            "Other"
+          ]
+        ]
       ],
+
       [
         "start_date",
-        "Start date",
+        "Start Date",
         "date"
       ],
+
       [
         "end_date",
-        "End date",
+        "End Date",
         "date"
       ],
+
       [
         "staff_member",
-        "Staff member",
+        "Staff Member",
         "text"
       ],
+
       [
         "description",
         "Description",
@@ -1403,40 +3017,76 @@ const specs = {
 
     display: row => `
       <h3>
-        ${esc(row.title)}
+        ${esc(
+          row.title
+        )}
       </h3>
 
       <p class="meta">
-        ${esc(row.start_date)}
+        ${esc(
+          row.start_date
+        )}
 
         ${
           row.end_date
-            ? ` – ${esc(
+            ? `
+              –
+              ${esc(
                 row.end_date
-              )}`
+              )}
+            `
             : ""
         }
 
         ·
 
         ${esc(
-          row.entry_type ||
-          "event"
+          humanize(
+            row.entry_type ||
+            "event"
+          )
         )}
       </p>
 
-      <p>
-        ${esc(
-          row.description || ""
-        )}
-      </p>
+      ${
+        row.staff_member
+          ? `
+            <p>
+              Staff:
+              ${esc(
+                row.staff_member
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        row.description
+          ? `
+            <p>
+              ${esc(
+                row.description
+              )}
+            </p>
+          `
+          : ""
+      }
     `
   },
 
+  /* -------------------------
+     GREENS
+     ------------------------- */
+
   greens: {
     title: "Greens",
-    table: "greens_logs",
-    order: "reading_date",
+
+    table:
+      "greens_logs",
+
+    order:
+      "reading_date",
 
     fields: [
       [
@@ -1444,46 +3094,55 @@ const specs = {
         "Date",
         "date"
       ],
+
       [
         "course",
         "Course",
         "text"
       ],
+
       [
         "green_name",
         "Green",
         "text"
       ],
+
       [
         "moisture",
         "Moisture",
         "number"
       ],
+
       [
         "firmness",
         "Firmness",
         "number"
       ],
+
       [
         "green_speed",
-        "Green speed",
+        "Green Speed",
         "number"
       ],
+
       [
         "mowing_height_mm",
-        "Mowing height mm",
+        "Mowing Height mm",
         "number"
       ],
+
       [
         "soil_temperature_c",
-        "Soil temp °C",
+        "Soil Temperature °C",
         "number"
       ],
+
       [
         "air_temperature_c",
-        "Air temp °C",
+        "Air Temperature °C",
         "number"
       ],
+
       [
         "notes",
         "Notes",
@@ -1502,26 +3161,41 @@ const specs = {
         ${esc(
           row.reading_date
         )}
+
+        ${
+          row.course
+            ? `
+              ·
+              ${esc(
+                row.course
+              )}
+            `
+            : ""
+        }
       </p>
 
       <p>
-        Moisture
+        Moisture:
         ${esc(
           String(
             row.moisture ??
             "—"
           )
         )}
+      </p>
 
-        · Firmness
+      <p>
+        Firmness:
         ${esc(
           String(
             row.firmness ??
             "—"
           )
         )}
+      </p>
 
-        · Speed
+      <p>
+        Green Speed:
         ${esc(
           String(
             row.green_speed ??
@@ -1529,40 +3203,76 @@ const specs = {
           )
         )}
       </p>
+
+      <p>
+        Mowing Height:
+        ${esc(
+          String(
+            row.mowing_height_mm ??
+            "—"
+          )
+        )}
+        mm
+      </p>
+
+      ${
+        row.notes
+          ? `
+            <p>
+              ${esc(
+                row.notes
+              )}
+            </p>
+          `
+          : ""
+      }
     `
   },
 
+  /* -------------------------
+     EQUIPMENT
+     ------------------------- */
+
   equipment: {
     title: "Equipment",
-    table: "equipment",
-    order: "equipment_name",
+
+    table:
+      "equipment",
+
+    order:
+      "equipment_name",
 
     fields: [
       [
         "equipment_name",
-        "Equipment name",
+        "Equipment Name",
         "text"
       ],
+
       [
         "manufacturer",
         "Manufacturer",
         "text"
       ],
+
       [
         "model",
         "Model",
         "text"
       ],
+
       [
         "fleet_number",
-        "Fleet number",
+        "Fleet Number",
         "text"
       ],
+
       [
         "serial_number",
-        "Serial number",
+        "Serial Number",
         "text"
       ],
+
       [
         "status",
         "Status",
@@ -1572,26 +3282,31 @@ const specs = {
             "operational",
             "Operational"
           ],
+
           [
             "needs_repair",
-            "Needs repair"
+            "Needs Repair"
           ],
+
           [
             "down",
             "Down"
           ]
         ]
       ],
+
       [
         "hours",
         "Hours",
         "number"
       ],
+
       [
         "next_service_date",
-        "Next service date",
+        "Next Service Date",
         "date"
       ],
+
       [
         "notes",
         "Notes",
@@ -1612,30 +3327,79 @@ const specs = {
             row.manufacturer,
             row.model,
             row.fleet_number
+              ? `Fleet #${row.fleet_number}`
+              : null
           ]
             .filter(Boolean)
             .join(" · ")
         )}
       </p>
 
-      <span class="tag">
-        ${esc(
-          row.status
-        )}
-      </span>
-
       <p>
-        ${esc(
-          row.notes || ""
-        )}
+        <span class="tag">
+          ${esc(
+            humanize(
+              row.status ||
+              "operational"
+            )
+          )}
+        </span>
       </p>
+
+      ${
+        row.hours != null
+          ? `
+            <p>
+              Hours:
+              ${esc(
+                String(
+                  row.hours
+                )
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        row.next_service_date
+          ? `
+            <p>
+              Next service:
+              ${esc(
+                row.next_service_date
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        row.notes
+          ? `
+            <p>
+              ${esc(
+                row.notes
+              )}
+            </p>
+          `
+          : ""
+      }
     `
   },
 
+  /* -------------------------
+     NOTES
+     ------------------------- */
+
   notes: {
     title: "Notes",
-    table: "daily_notes",
-    order: "note_date",
+
+    table:
+      "daily_notes",
+
+    order:
+      "note_date",
 
     fields: [
       [
@@ -1643,11 +3407,13 @@ const specs = {
         "Date",
         "date"
       ],
+
       [
         "category",
         "Category",
         "text"
       ],
+
       [
         "note_text",
         "Note",
@@ -1664,7 +3430,9 @@ const specs = {
         ${
           row.category
             ? `
-              <span class="tag">
+              <span
+                class="tag"
+              >
                 ${esc(
                   row.category
                 )}
@@ -1684,7 +3452,7 @@ const specs = {
 };
 
 /* =====================================================
-   GENERIC CRUD
+   GENERIC ADD / DELETE PAGES
    ===================================================== */
 
 async function renderCrud(
@@ -1693,6 +3461,7 @@ async function renderCrud(
 ) {
   page.innerHTML = `
     <div class="heading">
+
       <h2>
         ${spec.title}
       </h2>
@@ -1703,33 +3472,43 @@ async function renderCrud(
       >
         + Add
       </button>
+
     </div>
 
     <form
       id="record-form"
       class="form hidden"
     >
+
       <div class="form-grid">
 
-        ${spec.fields
-          .filter(
-            field =>
-              field[2] !==
-              "textarea"
-          )
-          .map(fieldHtml)
-          .join("")}
+        ${
+          spec.fields
+            .filter(
+              field =>
+                field[2] !==
+                "textarea"
+            )
+            .map(
+              fieldHtml
+            )
+            .join("")
+        }
 
       </div>
 
-      ${spec.fields
-        .filter(
-          field =>
-            field[2] ===
-            "textarea"
-        )
-        .map(fieldHtml)
-        .join("")}
+      ${
+        spec.fields
+          .filter(
+            field =>
+              field[2] ===
+              "textarea"
+          )
+          .map(
+            fieldHtml
+          )
+          .join("")
+      }
 
       <button
         class="primary"
@@ -1738,7 +3517,10 @@ async function renderCrud(
         Save
       </button>
 
-      <p id="form-message"></p>
+      <p
+        id="form-message"
+      ></p>
+
     </form>
 
     <section
@@ -1791,7 +3573,8 @@ async function renderCrud(
               .trim();
 
           if (
-            fieldValue === ""
+            fieldValue ===
+            ""
           ) {
             fieldValue =
               null;
@@ -1839,13 +3622,15 @@ async function renderCrud(
           .classList
           .add("hidden");
 
-        loadRecords(
+        await loadRecords(
           spec
         );
       }
     );
 
-  loadRecords(spec);
+  await loadRecords(
+    spec
+  );
 }
 
 async function loadRecords(
@@ -1856,16 +3641,25 @@ async function loadRecords(
       "#records"
     );
 
+  box.innerHTML = `
+    <div class="empty">
+      Loading…
+    </div>
+  `;
+
   const {
     data,
     error
   } = await db
-    .from(spec.table)
+    .from(
+      spec.table
+    )
     .select("*")
     .order(
       spec.order,
       {
-        ascending: false
+        ascending:
+          false
       }
     );
 
@@ -1898,6 +3692,7 @@ async function loadRecords(
           <article
             class="card row"
           >
+
             <div>
               ${spec.display(
                 row
@@ -1910,6 +3705,7 @@ async function loadRecords(
             >
               Delete
             </button>
+
           </article>
         `
       )
@@ -1919,36 +3715,45 @@ async function loadRecords(
     .querySelectorAll(
       ".delete"
     )
-    .forEach(
-      button => {
-        button.addEventListener(
-          "click",
-          async () => {
-            if (
-              !confirm(
-                "Delete this record?"
-              )
-            ) {
-              return;
-            }
-
-            await db
-              .from(
-                spec.table
-              )
-              .delete()
-              .eq(
-                "id",
-                button.dataset.id
-              );
-
-            loadRecords(
-              spec
-            );
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        async () => {
+          if (
+            !confirm(
+              "Delete this record?"
+            )
+          ) {
+            return;
           }
-        );
-      }
-    );
+
+          const {
+            error
+          } = await db
+            .from(
+              spec.table
+            )
+            .delete()
+            .eq(
+              "id",
+              button.dataset
+                .id
+            );
+
+          if (error) {
+            alert(
+              error.message
+            );
+
+            return;
+          }
+
+          await loadRecords(
+            spec
+          );
+        }
+      );
+    });
 }
 
 /* =====================================================
@@ -1977,7 +3782,9 @@ async function renderStaff(
   } = await db
     .from("profiles")
     .select("*")
-    .order("full_name");
+    .order(
+      "full_name"
+    );
 
   const box =
     document.querySelector(
@@ -1996,44 +3803,69 @@ async function renderStaff(
     return;
   }
 
+  if (!data?.length) {
+    box.innerHTML = `
+      <div class="empty">
+        No staff found.
+      </div>
+    `;
+
+    return;
+  }
+
   box.innerHTML =
-    cards(
-      data,
-      row => `
-        <h3>
-          ${esc(
-            row.full_name ||
-            row.email ||
-            "Staff"
-          )}
-        </h3>
+    data
+      .map(
+        row => `
+          <article
+            class="card"
+          >
 
-        <p>
-          <span class="tag">
-            ${esc(
-              row.position ||
-              row.role ||
-              "crew"
-            )}
-          </span>
-        </p>
+            <h3>
+              ${esc(
+                row.full_name ||
+                row.email ||
+                "Staff"
+              )}
+            </h3>
 
-        <p class="meta">
-          ${esc(
-            [
-              row.phone,
-              row.email
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          )}
-        </p>
-      `
-    );
+            <p>
+              <span
+                class="tag"
+              >
+                ${esc(
+                  row.position ||
+                  humanize(
+                    row.role ||
+                    "crew"
+                  )
+                )}
+              </span>
+            </p>
+
+            <p class="meta">
+              ${esc(
+                [
+                  row.phone,
+                  row.email
+                ]
+                  .filter(
+                    Boolean
+                  )
+                  .join(
+                    " · "
+                  )
+              )}
+            </p>
+
+          </article>
+        `
+      )
+      .join("");
 }
 
 /* =====================================================
-   FORM HELPERS
+   FIELD RENDERER
    ===================================================== */
 
 function fieldHtml(
@@ -2050,11 +3882,13 @@ function fieldHtml(
   ) {
     return `
       <label>
+
         ${label}
 
         <textarea
           id="${key}"
         ></textarea>
+
       </label>
     `;
   }
@@ -2065,32 +3899,39 @@ function fieldHtml(
   ) {
     return `
       <label>
+
         ${label}
 
         <select
           id="${key}"
         >
-          ${options
-            .map(
-              ([
-                optionValue,
-                text
-              ]) => `
-                <option
-                  value="${optionValue}"
-                >
-                  ${text}
-                </option>
-              `
-            )
-            .join("")}
+
+          ${
+            options
+              .map(
+                ([
+                  optionValue,
+                  optionText
+                ]) => `
+                  <option
+                    value="${optionValue}"
+                  >
+                    ${optionText}
+                  </option>
+                `
+              )
+              .join("")
+          }
+
         </select>
+
       </label>
     `;
   }
 
   return `
     <label>
+
       ${label}
 
       <input
@@ -2103,13 +3944,18 @@ function fieldHtml(
             : ""
         }
       >
+
     </label>
   `;
 }
 
+/* =====================================================
+   HELPERS
+   ===================================================== */
+
 function cards(
   rows,
-  render
+  renderer
 ) {
   if (!rows?.length) {
     return `
@@ -2121,49 +3967,98 @@ function cards(
 
   return `
     <div class="list">
-      ${rows
-        .map(
-          row => `
-            <article
-              class="card"
-            >
-              ${render(row)}
-            </article>
-          `
-        )
-        .join("")}
+
+      ${
+        rows
+          .map(
+            row => `
+              <article
+                class="card"
+              >
+                ${renderer(
+                  row
+                )}
+              </article>
+            `
+          )
+          .join("")
+      }
+
     </div>
   `;
 }
 
 function nullable(id) {
-  const value =
-    document
-      .querySelector(
-        `#${id}`
-      )
-      .value
-      .trim();
+  const element =
+    document.querySelector(
+      `#${id}`
+    );
 
-  return value === ""
-    ? null
-    : value;
+  if (!element) {
+    return null;
+  }
+
+  const value =
+    element.value.trim();
+
+  return (
+    value === ""
+      ? null
+      : value
+  );
 }
 
 function nullableNumber(
   id
 ) {
-  const value =
-    document
-      .querySelector(
-        `#${id}`
-      )
-      .value
-      .trim();
+  const element =
+    document.querySelector(
+      `#${id}`
+    );
 
-  return value === ""
-    ? null
-    : Number(value);
+  if (!element) {
+    return null;
+  }
+
+  const value =
+    element.value.trim();
+
+  if (
+    value === ""
+  ) {
+    return null;
+  }
+
+  return Number(
+    value
+  );
+}
+
+function today() {
+  return new Date()
+    .toISOString()
+    .slice(
+      0,
+      10
+    );
+}
+
+function humanize(
+  value
+) {
+  return String(
+    value || ""
+  )
+    .replaceAll(
+      "_",
+      " "
+    )
+    .replace(
+      /\b\w/g,
+      letter =>
+        letter
+          .toUpperCase()
+    );
 }
 
 function esc(value) {
