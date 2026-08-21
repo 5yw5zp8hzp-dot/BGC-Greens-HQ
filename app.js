@@ -6,7 +6,8 @@ const db = supabase.createClient(
 );
 
 const state = {
-  page: "home"
+  page: "home",
+  calendarMonth: null
 };
 
 /* =====================================================
@@ -255,12 +256,38 @@ async function renderPage() {
 }
 
 /* =====================================================
-   HOME
+   HOME DASHBOARD
    ===================================================== */
 
 async function renderHome(
   page
 ) {
+  if (!state.calendarMonth) {
+    state.calendarMonth =
+      new Date();
+
+    state.calendarMonth
+      .setDate(1);
+  }
+
+  const monthStart =
+    new Date(
+      state.calendarMonth
+        .getFullYear(),
+      state.calendarMonth
+        .getMonth(),
+      1
+    );
+
+  const monthEnd =
+    new Date(
+      state.calendarMonth
+        .getFullYear(),
+      state.calendarMonth
+        .getMonth() + 1,
+      0
+    );
+
   const [
     tasks,
     equipment,
@@ -268,6 +295,7 @@ async function renderHome(
     calendar,
     lowStock
   ] = await Promise.all([
+
     db
       .from("tasks")
       .select(
@@ -314,29 +342,33 @@ async function renderHome(
         "calendar_entries"
       )
       .select("*")
-      .gte(
+      .lte(
         "start_date",
-        today()
+        formatDate(
+          monthEnd
+        )
+      )
+      .or(
+        `end_date.gte.${formatDate(
+          monthStart
+        )},end_date.is.null`
       )
       .order(
         "start_date"
-      )
-      .limit(3),
+      ),
 
     db
       .from(
         "chemical_products"
       )
       .select("*")
-      .order(
-        "quantity"
-      )
   ]);
 
   const lowProducts =
     (
       lowStock.data || []
     ).filter(product => {
+
       if (
         product
           .reorder_level ==
@@ -367,7 +399,7 @@ async function renderHome(
 
       <div class="card">
         <div class="meta">
-          Open tasks
+          Open Tasks
         </div>
 
         <h3>
@@ -380,7 +412,7 @@ async function renderHome(
 
       <div class="card">
         <div class="meta">
-          Equipment down
+          Equipment Down
         </div>
 
         <h3>
@@ -393,7 +425,7 @@ async function renderHome(
 
       <div class="card">
         <div class="meta">
-          Low stock products
+          Low Stock Products
         </div>
 
         <h3>
@@ -405,7 +437,76 @@ async function renderHome(
 
     </div>
 
-    <h3>
+    <div
+      class="card"
+      style="
+        margin-top:24px;
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:12px;
+          margin-bottom:18px;
+        "
+      >
+
+        <button
+          id="calendar-prev"
+          class="primary"
+          type="button"
+        >
+          ‹
+        </button>
+
+        <h2
+          style="
+            margin:0;
+            text-align:center;
+            color:var(--navy);
+          "
+        >
+          ${
+            monthStart
+              .toLocaleDateString(
+                "en-CA",
+                {
+                  month:
+                    "long",
+                  year:
+                    "numeric"
+                }
+              )
+          }
+        </h2>
+
+        <button
+          id="calendar-next"
+          class="primary"
+          type="button"
+        >
+          ›
+        </button>
+
+      </div>
+
+      ${
+        buildMonthCalendar(
+          monthStart,
+          calendar.data || []
+        )
+      }
+
+    </div>
+
+    <h3
+      style="
+        margin-top:28px;
+      "
+    >
       Recent Notes
     </h3>
 
@@ -427,35 +528,343 @@ async function renderHome(
         `
       )
     }
-
-    <h3>
-      Upcoming
-    </h3>
-
-    ${
-      cards(
-        calendar.data,
-        row => `
-          <h3>
-            ${esc(
-              row.title
-            )}
-          </h3>
-
-          <p class="meta">
-            ${esc(
-              row.start_date
-            )}
-            ·
-            ${esc(
-              row.entry_type ||
-              "event"
-            )}
-          </p>
-        `
-      )
-    }
   `;
+
+  document
+    .querySelector(
+      "#calendar-prev"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        state.calendarMonth =
+          new Date(
+            state.calendarMonth
+              .getFullYear(),
+
+            state.calendarMonth
+              .getMonth() - 1,
+
+            1
+          );
+
+        renderHome(
+          page
+        );
+      }
+    );
+
+  document
+    .querySelector(
+      "#calendar-next"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        state.calendarMonth =
+          new Date(
+            state.calendarMonth
+              .getFullYear(),
+
+            state.calendarMonth
+              .getMonth() + 1,
+
+            1
+          );
+
+        renderHome(
+          page
+        );
+      }
+    );
+}
+
+/* =====================================================
+   MONTHLY CALENDAR
+   ===================================================== */
+
+function buildMonthCalendar(
+  monthStart,
+  events
+) {
+  const year =
+    monthStart
+      .getFullYear();
+
+  const month =
+    monthStart
+      .getMonth();
+
+  const firstDay =
+    new Date(
+      year,
+      month,
+      1
+    ).getDay();
+
+  const daysInMonth =
+    new Date(
+      year,
+      month + 1,
+      0
+    ).getDate();
+
+  const previousMonthDays =
+    new Date(
+      year,
+      month,
+      0
+    ).getDate();
+
+  const todayDate =
+    new Date();
+
+  const dayNames = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ];
+
+  let html = `
+    <div
+      style="
+        display:grid;
+        grid-template-columns:
+          repeat(7,minmax(0,1fr));
+        gap:4px;
+        overflow-x:auto;
+      "
+    >
+  `;
+
+  for (
+    const dayName of
+    dayNames
+  ) {
+    html += `
+      <div
+        style="
+          text-align:center;
+          font-weight:800;
+          padding:8px 2px;
+          color:var(--navy);
+          font-size:.82rem;
+        "
+      >
+        ${dayName}
+      </div>
+    `;
+  }
+
+  for (
+    let cell = 0;
+    cell < 42;
+    cell++
+  ) {
+
+    let dayNumber;
+
+    let cellDate;
+
+    let otherMonth =
+      false;
+
+    if (
+      cell <
+      firstDay
+    ) {
+
+      dayNumber =
+        previousMonthDays -
+        firstDay +
+        cell +
+        1;
+
+      cellDate =
+        new Date(
+          year,
+          month - 1,
+          dayNumber
+        );
+
+      otherMonth =
+        true;
+    }
+
+    else if (
+      cell >=
+      firstDay +
+      daysInMonth
+    ) {
+
+      dayNumber =
+        cell -
+        firstDay -
+        daysInMonth +
+        1;
+
+      cellDate =
+        new Date(
+          year,
+          month + 1,
+          dayNumber
+        );
+
+      otherMonth =
+        true;
+    }
+
+    else {
+
+      dayNumber =
+        cell -
+        firstDay +
+        1;
+
+      cellDate =
+        new Date(
+          year,
+          month,
+          dayNumber
+        );
+    }
+
+    const dateString =
+      formatDate(
+        cellDate
+      );
+
+    const isToday =
+      cellDate
+        .getFullYear() ===
+        todayDate
+          .getFullYear() &&
+
+      cellDate
+        .getMonth() ===
+        todayDate
+          .getMonth() &&
+
+      cellDate
+        .getDate() ===
+        todayDate
+          .getDate();
+
+    const dayEvents =
+      events.filter(
+        event => {
+
+          const start =
+            event
+              .start_date;
+
+          const end =
+            event
+              .end_date ||
+            event
+              .start_date;
+
+          return (
+            dateString >=
+              start &&
+            dateString <=
+              end
+          );
+        }
+      );
+
+    html += `
+      <div
+        style="
+          min-height:105px;
+          min-width:0;
+          border:1px solid
+            var(--border);
+          border-radius:8px;
+          padding:6px;
+          background:${
+            otherMonth
+              ? "#f7f7f7"
+              : "#fff"
+          };
+          opacity:${
+            otherMonth
+              ? ".55"
+              : "1"
+          };
+        "
+      >
+
+        <div
+          style="
+            display:flex;
+            justify-content:flex-end;
+            margin-bottom:5px;
+          "
+        >
+
+          <span
+            style="
+              display:grid;
+              place-items:center;
+              width:28px;
+              height:28px;
+              border-radius:50%;
+              font-weight:800;
+              ${
+                isToday
+                  ? `
+                    background:#006747;
+                    color:#fff;
+                  `
+                  : ""
+              }
+            "
+          >
+            ${dayNumber}
+          </span>
+
+        </div>
+
+        ${
+          dayEvents
+            .map(
+              event => `
+                <div
+                  style="
+                    font-size:.72rem;
+                    font-weight:700;
+                    padding:4px 5px;
+                    margin-bottom:4px;
+                    border-radius:6px;
+                    background:#e7f2ed;
+                    color:#004B2B;
+                    overflow:hidden;
+                    word-break:break-word;
+                  "
+                >
+                  ${esc(
+                    event.title
+                  )}
+                </div>
+              `
+            )
+            .join("")
+        }
+
+      </div>
+    `;
+  }
+
+  html += `
+    </div>
+  `;
+
+  return html;
 }
 
 /* =====================================================
@@ -962,6 +1371,7 @@ async function saveApplication(
   }
 
   const payload = {
+
     application_date:
       document
         .querySelector(
@@ -1030,6 +1440,7 @@ async function saveApplication(
     const product of
     selectedProducts
   ) {
+
     const {
       error: productError
     } = await db
@@ -1037,6 +1448,7 @@ async function saveApplication(
         "application_products"
       )
       .insert({
+
         application_id:
           application.id,
 
@@ -1048,14 +1460,6 @@ async function saveApplication(
       });
 
     if (productError) {
-      /*
-        Remove any product rows that
-        were already inserted first.
-
-        Their database trigger restores
-        inventory before the application
-        itself is deleted.
-      */
 
       await db
         .from(
@@ -1189,6 +1593,7 @@ async function loadApplications() {
     data
       .map(
         application => {
+
           const products =
             application
               .application_products ||
@@ -1234,6 +1639,7 @@ async function loadApplications() {
                     products
                       .map(
                         item => {
+
                           const chemical =
                             item
                               .chemical_products;
@@ -1368,9 +1774,11 @@ async function loadApplications() {
       ".delete-application"
     )
     .forEach(button => {
+
       button.addEventListener(
         "click",
         async () => {
+
           const appId =
             button.dataset.id;
 
@@ -1381,12 +1789,6 @@ async function loadApplications() {
           ) {
             return;
           }
-
-          /*
-            Explicitly delete application
-            products FIRST so inventory
-            transactions are restored.
-          */
 
           const {
             error:
@@ -1481,11 +1883,9 @@ async function renderChemicalInventory(
 
   page.innerHTML = `
     <div class="heading">
-
       <h2>
         Chemical Inventory
       </h2>
-
     </div>
 
     <div
@@ -1541,7 +1941,11 @@ async function renderChemicalInventory(
       class="list"
     ></section>
 
-    <h3>
+    <h3
+      style="
+        margin-top:28px;
+      "
+    >
       Recent Inventory Activity
     </h3>
 
@@ -1558,6 +1962,7 @@ async function renderChemicalInventory(
     .addEventListener(
       "click",
       () => {
+
         hideInventoryForms();
 
         document
@@ -1576,6 +1981,7 @@ async function renderChemicalInventory(
     .addEventListener(
       "click",
       () => {
+
         hideInventoryForms();
 
         document
@@ -1594,6 +2000,7 @@ async function renderChemicalInventory(
     .addEventListener(
       "click",
       () => {
+
         hideInventoryForms();
 
         document
@@ -1640,7 +2047,7 @@ async function renderChemicalInventory(
 }
 
 /* =====================================================
-   INVENTORY FORMS
+   INVENTORY FORM HELPERS
    ===================================================== */
 
 function hideInventoryForms() {
@@ -1649,6 +2056,7 @@ function hideInventoryForms() {
     "#receive-stock-form",
     "#adjust-stock-form"
   ].forEach(selector => {
+
     document
       .querySelector(
         selector
@@ -1659,7 +2067,7 @@ function hideInventoryForms() {
 }
 
 /* =====================================================
-   ADD NEW CHEMICAL
+   ADD CHEMICAL
    ===================================================== */
 
 function addChemicalForm() {
@@ -1807,6 +2215,7 @@ async function saveNewChemical(
     "";
 
   const payload = {
+
     product_name:
       document
         .querySelector(
@@ -1997,6 +2406,7 @@ async function receiveInventory(
   }
 
   const payload = {
+
     product_id:
       document
         .querySelector(
@@ -2224,6 +2634,7 @@ async function adjustInventory(
   }
 
   const payload = {
+
     product_id:
       document
         .querySelector(
@@ -2303,6 +2714,7 @@ function renderChemicalCards(
   box.innerHTML =
     products
       .map(product => {
+
         const low =
           product
             .reorder_level !=
@@ -2409,6 +2821,7 @@ function renderChemicalCards(
    ===================================================== */
 
 async function loadInventoryHistory() {
+
   const box =
     document.querySelector(
       "#inventory-history"
@@ -2484,6 +2897,7 @@ async function loadInventoryHistory() {
     data
       .map(
         transaction => {
+
           const product =
             transaction
               .chemical_products;
@@ -2594,7 +3008,7 @@ async function loadInventoryHistory() {
 }
 
 /* =====================================================
-   PRODUCT OPTION HELPER
+   PRODUCT OPTIONS
    ===================================================== */
 
 function productOptions(
@@ -2633,18 +3047,19 @@ function productOptions(
 
 const specs = {
 
-  /* -------------------------
-     TASKS
-     ------------------------- */
-
   tasks: {
-    title: "Tasks",
 
-    table: "tasks",
+    title:
+      "Tasks",
 
-    order: "created_at",
+    table:
+      "tasks",
+
+    order:
+      "created_at",
 
     fields: [
+
       [
         "title",
         "Title",
@@ -2784,18 +3199,19 @@ const specs = {
     `
   },
 
-  /* -------------------------
-     JOB BOARD
-     ------------------------- */
-
   jobs: {
-    title: "Job Board",
 
-    table: "jobs",
+    title:
+      "Job Board",
 
-    order: "created_at",
+    table:
+      "jobs",
+
+    order:
+      "created_at",
 
     fields: [
+
       [
         "title",
         "Title",
@@ -2933,12 +3349,10 @@ const specs = {
     `
   },
 
-  /* -------------------------
-     CALENDAR
-     ------------------------- */
-
   calendar: {
-    title: "Calendar",
+
+    title:
+      "Calendar",
 
     table:
       "calendar_entries",
@@ -2947,6 +3361,7 @@ const specs = {
       "start_date",
 
     fields: [
+
       [
         "title",
         "Title",
@@ -3023,6 +3438,7 @@ const specs = {
       </h3>
 
       <p class="meta">
+
         ${esc(
           row.start_date
         )}
@@ -3046,6 +3462,7 @@ const specs = {
             "event"
           )
         )}
+
       </p>
 
       ${
@@ -3075,12 +3492,10 @@ const specs = {
     `
   },
 
-  /* -------------------------
-     GREENS
-     ------------------------- */
-
   greens: {
-    title: "Greens",
+
+    title:
+      "Greens",
 
     table:
       "greens_logs",
@@ -3089,6 +3504,7 @@ const specs = {
       "reading_date",
 
     fields: [
+
       [
         "reading_date",
         "Date",
@@ -3158,6 +3574,7 @@ const specs = {
       </h3>
 
       <p class="meta">
+
         ${esc(
           row.reading_date
         )}
@@ -3172,6 +3589,7 @@ const specs = {
             `
             : ""
         }
+
       </p>
 
       <p>
@@ -3229,12 +3647,10 @@ const specs = {
     `
   },
 
-  /* -------------------------
-     EQUIPMENT
-     ------------------------- */
-
   equipment: {
-    title: "Equipment",
+
+    title:
+      "Equipment",
 
     table:
       "equipment",
@@ -3243,6 +3659,7 @@ const specs = {
       "equipment_name",
 
     fields: [
+
       [
         "equipment_name",
         "Equipment Name",
@@ -3326,6 +3743,7 @@ const specs = {
           [
             row.manufacturer,
             row.model,
+
             row.fleet_number
               ? `Fleet #${row.fleet_number}`
               : null
@@ -3388,12 +3806,10 @@ const specs = {
     `
   },
 
-  /* -------------------------
-     NOTES
-     ------------------------- */
-
   notes: {
-    title: "Notes",
+
+    title:
+      "Notes",
 
     table:
       "daily_notes",
@@ -3402,6 +3818,7 @@ const specs = {
       "note_date",
 
     fields: [
+
       [
         "note_date",
         "Date",
@@ -3440,6 +3857,7 @@ const specs = {
             `
             : ""
         }
+
       </h3>
 
       <p>
@@ -3452,7 +3870,7 @@ const specs = {
 };
 
 /* =====================================================
-   GENERIC ADD / DELETE PAGES
+   GENERIC CRUD
    ===================================================== */
 
 async function renderCrud(
@@ -3536,6 +3954,7 @@ async function renderCrud(
     .addEventListener(
       "click",
       () => {
+
         document
           .querySelector(
             "#record-form"
@@ -3552,9 +3971,11 @@ async function renderCrud(
     .addEventListener(
       "submit",
       async event => {
+
         event.preventDefault();
 
-        const payload = {};
+        const payload =
+          {};
 
         for (
           const [
@@ -3564,6 +3985,7 @@ async function renderCrud(
           ] of
           spec.fields
         ) {
+
           let fieldValue =
             document
               .getElementById(
@@ -3606,6 +4028,7 @@ async function renderCrud(
             );
 
         if (error) {
+
           document
             .querySelector(
               "#form-message"
@@ -3616,7 +4039,8 @@ async function renderCrud(
           return;
         }
 
-        event.target.reset();
+        event.target
+          .reset();
 
         event.target
           .classList
@@ -3632,6 +4056,10 @@ async function renderCrud(
     spec
   );
 }
+
+/* =====================================================
+   LOAD STANDARD RECORDS
+   ===================================================== */
 
 async function loadRecords(
   spec
@@ -3664,6 +4092,7 @@ async function loadRecords(
     );
 
   if (error) {
+
     box.innerHTML = `
       <div class="empty">
         ${esc(
@@ -3676,6 +4105,7 @@ async function loadRecords(
   }
 
   if (!data?.length) {
+
     box.innerHTML = `
       <div class="empty">
         No records yet.
@@ -3716,9 +4146,11 @@ async function loadRecords(
       ".delete"
     )
     .forEach(button => {
+
       button.addEventListener(
         "click",
         async () => {
+
           if (
             !confirm(
               "Delete this record?"
@@ -3741,6 +4173,7 @@ async function loadRecords(
             );
 
           if (error) {
+
             alert(
               error.message
             );
@@ -3765,9 +4198,11 @@ async function renderStaff(
 ) {
   page.innerHTML = `
     <div class="heading">
+
       <h2>
         Staff
       </h2>
+
     </div>
 
     <section
@@ -3792,6 +4227,7 @@ async function renderStaff(
     );
 
   if (error) {
+
     box.innerHTML = `
       <div class="empty">
         ${esc(
@@ -3804,6 +4240,7 @@ async function renderStaff(
   }
 
   if (!data?.length) {
+
     box.innerHTML = `
       <div class="empty">
         No staff found.
@@ -3865,7 +4302,7 @@ async function renderStaff(
 }
 
 /* =====================================================
-   FIELD RENDERER
+   FORM FIELDS
    ===================================================== */
 
 function fieldHtml(
@@ -3876,10 +4313,12 @@ function fieldHtml(
     options
   ]
 ) {
+
   if (
     type ===
     "textarea"
   ) {
+
     return `
       <label>
 
@@ -3897,6 +4336,7 @@ function fieldHtml(
     type ===
     "select"
   ) {
+
     return `
       <label>
 
@@ -3937,6 +4377,7 @@ function fieldHtml(
       <input
         id="${key}"
         type="${type}"
+
         ${
           type ===
           "number"
@@ -3957,7 +4398,9 @@ function cards(
   rows,
   renderer
 ) {
+
   if (!rows?.length) {
+
     return `
       <div class="empty">
         Nothing to show.
@@ -3989,6 +4432,7 @@ function cards(
 }
 
 function nullable(id) {
+
   const element =
     document.querySelector(
       `#${id}`
@@ -4011,6 +4455,7 @@ function nullable(id) {
 function nullableNumber(
   id
 ) {
+
   const element =
     document.querySelector(
       `#${id}`
@@ -4035,17 +4480,43 @@ function nullableNumber(
 }
 
 function today() {
-  return new Date()
-    .toISOString()
-    .slice(
-      0,
-      10
-    );
+  return formatDate(
+    new Date()
+  );
+}
+
+function formatDate(date) {
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    )
+      .padStart(
+        2,
+        "0"
+      );
+
+  const day =
+    String(
+      date.getDate()
+    )
+      .padStart(
+        2,
+        "0"
+      );
+
+  return (
+    `${year}-${month}-${day}`
+  );
 }
 
 function humanize(
   value
 ) {
+
   return String(
     value || ""
   )
@@ -4062,6 +4533,7 @@ function humanize(
 }
 
 function esc(value) {
+
   const div =
     document.createElement(
       "div"
