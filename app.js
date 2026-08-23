@@ -564,13 +564,14 @@ async function renderApplications(page) {
     error: productError
   } = await db
     .from("chemical_products")
-    .select(`
-      id,
-      product_name,
-      quantity,
-      unit
-    `)
-    .order("product_name");
+.select(`
+  id,
+  product_name,
+  quantity,
+  unit
+`)
+.eq("active", true)
+.order("product_name");
 
   if (productError) {
     page.innerHTML = `
@@ -1376,8 +1377,9 @@ async function renderChemicalInventory(page) {
     error
   } = await db
     .from("chemical_products")
-    .select("*")
-    .order("product_name");
+.select("*")
+.eq("active", true)
+.order("product_name");
 
   if (error) {
     page.innerHTML = `
@@ -2074,72 +2076,104 @@ function renderChemicalCards(products) {
       const low =
         product.reorder_level != null &&
         Number(product.quantity) <=
-          Number(
-            product.reorder_level
-          );
+        Number(product.reorder_level);
 
       return `
-        <article class="card">
+        <article class="card row">
 
-          <h3>
-            ${esc(product.product_name)}
-          </h3>
+          <div>
 
-          <p>
+            <h3>
+              ${esc(product.product_name)}
+            </h3>
 
-            <span class="tag">
+            <p>
+              <span class="tag">
+                ${esc(
+                  String(
+                    product.quantity ?? 0
+                  )
+                )}
+                ${esc(product.unit || "")}
+              </span>
+
+              ${
+                low
+                  ? `
+                    <span class="tag">
+                      LOW STOCK
+                    </span>
+                  `
+                  : ""
+              }
+            </p>
+
+            <p class="meta">
               ${esc(
-                String(
-                  product.quantity ?? 0
-                )
+                [
+                  product.product_type,
+                  product.manufacturer,
+                  product.storage_location
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
               )}
-              ${esc(product.unit || "")}
-            </span>
+            </p>
 
-            ${
-              low
-                ? `
-                  <span class="tag">
-                    LOW STOCK
-                  </span>
-                `
-                : ""
-            }
+          </div>
 
-          </p>
-
-          <p class="meta">
-            ${esc(
-              [
-                product.product_type,
-                product.manufacturer,
-                product.storage_location
-              ]
-                .filter(Boolean)
-                .join(" · ")
-            )}
-          </p>
-
-          ${
-            product.reorder_level != null
-              ? `
-                <p class="meta">
-                  Low stock warning:
-                  ${esc(
-                    String(
-                      product.reorder_level
-                    )
-                  )}
-                  ${esc(product.unit || "")}
-                </p>
-              `
-              : ""
-          }
+          <button
+            class="delete remove-chemical"
+            data-id="${product.id}"
+            type="button"
+          >
+            Delete
+          </button>
 
         </article>
       `;
     })
     .join("");
+
+  box
+    .querySelectorAll(
+      ".remove-chemical"
+    )
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        async () => {
+          const confirmed =
+            confirm(
+              "Remove this product from current inventory? Old application records will be kept."
+            );
+
+          if (!confirmed) {
+            return;
+          }
+
+          const { error } =
+            await db
+              .from("chemical_products")
+              .update({
+                active: false
+              })
+              .eq(
+                "id",
+                button.dataset.id
+              );
+
+          if (error) {
+            alert(error.message);
+            return;
+          }
+
+          await renderChemicalInventory(
+            document.querySelector("#page")
+          );
+        }
+      );
+    });
 }
 
 async function loadInventoryHistory() {
