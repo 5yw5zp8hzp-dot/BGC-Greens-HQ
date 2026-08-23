@@ -1597,23 +1597,31 @@ function addChemicalForm() {
 
           <select id="new_unit">
 
-            <option value="L">
-              Litres
-            </option>
+         <option value="L">
+    Litres
+  </option>
 
-            <option value="mL">
-              Millilitres
-            </option>
+  <option value="mL">
+    Millilitres
+  </option>
 
-            <option value="kg">
-              Kilograms
-            </option>
+  <option value="kg">
+    Kilograms
+  </option>
 
-            <option value="g">
-              Grams
-            </option>
+  <option value="g">
+    Grams
+  </option>
 
-          </select>
+  <option value="bags">
+    Bags
+  </option>
+
+  <option value="jugs">
+    Jugs
+  </option>
+
+</select>
 
         </label>
 
