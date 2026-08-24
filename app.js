@@ -1,5 +1,16 @@
 const cfg = window.APP_CONFIG;
-const db = supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+const db = supabase.createClient(
+  cfg.SUPABASE_URL,
+  cfg.SUPABASE_ANON_KEY
+);
+
+/* =====================================================
+   BRAMPTON GOLF CLUB WEATHER LOCATION
+   ===================================================== */
+
+const BRAMPTON_GOLF_LAT = 43.66502;
+const BRAMPTON_GOLF_LON = -79.71436;
 
 const state = {
   page: "home",
@@ -13,130 +24,215 @@ const navItems = [
   ["applications", "Applications"],
   ["chemicals", "Chem Inventory"],
   ["calendar", "Calendar"],
-  ["greens", "Greens"],
   ["equipment", "Equipment"],
   ["staff", "Staff"],
   ["notes", "Notes"]
 ];
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener(
+  "DOMContentLoaded",
+  init
+);
 
 async function init() {
   renderNav();
 
   document
     .querySelector("#login-form")
-    .addEventListener("submit", login);
+    .addEventListener(
+      "submit",
+      login
+    );
 
   document
-    .querySelector("#sign-out-button")
-    .addEventListener("click", () => db.auth.signOut());
+    .querySelector(
+      "#sign-out-button"
+    )
+    .addEventListener(
+      "click",
+      () => db.auth.signOut()
+    );
 
-  const { data } = await db.auth.getSession();
+  const { data } =
+    await db.auth.getSession();
 
-  showForSession(data.session);
+  showForSession(
+    data.session
+  );
 
-  db.auth.onAuthStateChange((_event, session) => {
-    showForSession(session);
-  });
+  db.auth.onAuthStateChange(
+    (_event, session) => {
+      showForSession(
+        session
+      );
+    }
+  );
 }
 
 async function login(event) {
   event.preventDefault();
 
-  const email = document
-    .querySelector("#login-email")
-    .value
-    .trim();
+  const email =
+    document
+      .querySelector(
+        "#login-email"
+      )
+      .value
+      .trim();
 
-  const password = document
-    .querySelector("#login-password")
-    .value;
+  const password =
+    document
+      .querySelector(
+        "#login-password"
+      )
+      .value;
 
-  const message = document.querySelector("#login-message");
+  const message =
+    document.querySelector(
+      "#login-message"
+    );
 
   message.textContent = "";
 
-  const { error } = await db.auth.signInWithPassword({
-    email,
-    password
-  });
+  const { error } =
+    await db.auth.signInWithPassword({
+      email,
+      password
+    });
 
   if (error) {
-    message.textContent = error.message;
+    message.textContent =
+      error.message;
   }
 }
 
 function showForSession(session) {
   document
-    .querySelector("#login-screen")
-    .classList.toggle("hidden", !!session);
+    .querySelector(
+      "#login-screen"
+    )
+    .classList.toggle(
+      "hidden",
+      !!session
+    );
 
   document
-    .querySelector("#app-shell")
-    .classList.toggle("hidden", !session);
+    .querySelector(
+      "#app-shell"
+    )
+    .classList.toggle(
+      "hidden",
+      !session
+    );
 
   if (session) {
     renderPage();
   }
 }
 
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
+
 function renderNav() {
-  const nav = document.querySelector("#nav");
+  const nav =
+    document.querySelector(
+      "#nav"
+    );
 
-  nav.innerHTML = navItems
-    .map(
-      ([key, label]) => `
-        <button
-          data-page="${key}"
-          class="${key === "home" ? "active" : ""}"
-        >
-          ${label}
-        </button>
-      `
-    )
-    .join("");
+  nav.innerHTML =
+    navItems
+      .map(
+        ([key, label]) => `
+          <button
+            data-page="${key}"
+            class="${
+              key === state.page
+                ? "active"
+                : ""
+            }"
+          >
+            ${label}
+          </button>
+        `
+      )
+      .join("");
 
-  nav.addEventListener("click", event => {
-    const button = event.target.closest("button[data-page]");
+  nav.addEventListener(
+    "click",
+    event => {
+      const button =
+        event.target.closest(
+          "button[data-page]"
+        );
 
-    if (!button) {
-      return;
+      if (!button) {
+        return;
+      }
+
+      state.page =
+        button.dataset.page;
+
+      [
+        ...nav.querySelectorAll(
+          "button"
+        )
+      ].forEach(item => {
+        item.classList.toggle(
+          "active",
+          item === button
+        );
+      });
+
+      renderPage();
     }
-
-    state.page = button.dataset.page;
-
-    [...nav.querySelectorAll("button")].forEach(item => {
-      item.classList.toggle("active", item === button);
-    });
-
-    renderPage();
-  });
+  );
 }
 
 async function renderPage() {
-  const page = document.querySelector("#page");
+  const page =
+    document.querySelector(
+      "#page"
+    );
 
-  if (state.page === "home") {
+  if (
+    state.page === "home"
+  ) {
     return renderHome(page);
   }
 
-  if (state.page === "applications") {
-    return renderApplications(page);
+  if (
+    state.page ===
+    "applications"
+  ) {
+    return renderApplications(
+      page
+    );
   }
 
-  if (state.page === "chemicals") {
-    return renderChemicalInventory(page);
+  if (
+    state.page ===
+    "chemicals"
+  ) {
+    return renderChemicalInventory(
+      page
+    );
   }
 
-  if (state.page === "staff") {
+  if (
+    state.page === "staff"
+  ) {
     return renderStaff(page);
   }
 
-  const spec = specs[state.page];
+  const spec =
+    specs[state.page];
 
   if (spec) {
-    return renderCrud(page, spec);
+    return renderCrud(
+      page,
+      spec
+    );
   }
 }
 
@@ -146,21 +242,30 @@ async function renderPage() {
 
 async function renderHome(page) {
   if (!state.calendarMonth) {
-    state.calendarMonth = new Date();
-    state.calendarMonth.setDate(1);
+    state.calendarMonth =
+      new Date();
+
+    state.calendarMonth
+      .setDate(1);
   }
 
-  const monthStart = new Date(
-    state.calendarMonth.getFullYear(),
-    state.calendarMonth.getMonth(),
-    1
-  );
+  const monthStart =
+    new Date(
+      state.calendarMonth
+        .getFullYear(),
+      state.calendarMonth
+        .getMonth(),
+      1
+    );
 
-  const monthEnd = new Date(
-    state.calendarMonth.getFullYear(),
-    state.calendarMonth.getMonth() + 1,
-    0
-  );
+  const monthEnd =
+    new Date(
+      state.calendarMonth
+        .getFullYear(),
+      state.calendarMonth
+        .getMonth() + 1,
+      0
+    );
 
   const [
     tasks,
@@ -168,59 +273,93 @@ async function renderHome(page) {
     notes,
     calendar,
     chemicals
-  ] = await Promise.all([
-    db
-      .from("tasks")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .neq("status", "done"),
+  ] =
+    await Promise.all([
+      db
+        .from("tasks")
+        .select("*", {
+          count: "exact",
+          head: true
+        })
+        .neq(
+          "status",
+          "done"
+        ),
 
-    db
-      .from("equipment")
-      .select("*", {
-        count: "exact",
-        head: true
-      })
-      .eq("status", "down"),
+      db
+        .from("equipment")
+        .select("*", {
+          count: "exact",
+          head: true
+        })
+        .eq(
+          "status",
+          "down"
+        ),
 
-    db
-      .from("daily_notes")
-      .select("*")
-      .order("note_date", {
-        ascending: false
-      })
-      .limit(3),
+      db
+        .from("daily_notes")
+        .select("*")
+        .order(
+          "note_date",
+          {
+            ascending: false
+          }
+        )
+        .limit(3),
 
-    db
-      .from("calendar_entries")
-      .select("*")
-      .lte(
-        "start_date",
-        formatDate(monthEnd)
-      )
-      .or(
-        `end_date.gte.${formatDate(monthStart)},end_date.is.null`
-      )
-      .order("start_date"),
+      db
+        .from(
+          "calendar_entries"
+        )
+        .select("*")
+        .lte(
+          "start_date",
+          formatDate(
+            monthEnd
+          )
+        )
+        .or(
+          `end_date.gte.${formatDate(
+            monthStart
+          )},end_date.is.null`
+        )
+        .order(
+          "start_date"
+        ),
 
-    db
-      .from("chemical_products")
-      .select("*")
-      .eq("active", true)
-  ]);
+      db
+        .from(
+          "chemical_products"
+        )
+        .select("*")
+        .eq(
+          "active",
+          true
+        )
+    ]);
 
-  const lowProducts = (chemicals.data || []).filter(product => {
-    if (product.reorder_level == null) {
-      return false;
-    }
+  const lowProducts =
+    (
+      chemicals.data ||
+      []
+    ).filter(product => {
+      if (
+        product.reorder_level ==
+        null
+      ) {
+        return false;
+      }
 
-    return (
-      Number(product.quantity) <=
-      Number(product.reorder_level)
-    );
-  });
+      return (
+        Number(
+          product.quantity
+        ) <=
+        Number(
+          product.reorder_level
+        )
+      );
+    });
 
   page.innerHTML = `
     <div class="heading">
@@ -291,13 +430,16 @@ async function renderHome(page) {
             color:var(--navy);
           "
         >
-          ${monthStart.toLocaleDateString(
-            "en-CA",
-            {
-              month: "long",
-              year: "numeric"
-            }
-          )}
+          ${
+            monthStart
+              .toLocaleDateString(
+                "en-CA",
+                {
+                  month: "long",
+                  year: "numeric"
+                }
+              )
+          }
         </h2>
 
         <button
@@ -310,77 +452,111 @@ async function renderHome(page) {
 
       </div>
 
-      ${buildMonthCalendar(
-        monthStart,
-        calendar.data || []
-      )}
+      ${
+        buildMonthCalendar(
+          monthStart,
+          calendar.data || []
+        )
+      }
 
     </div>
 
-    <h3 style="margin-top:28px;">
+    <h3
+      style="margin-top:28px;"
+    >
       Recent Notes
     </h3>
 
-    ${cards(
-      notes.data,
-      row => `
-        <h3>${esc(row.note_date)}</h3>
-        <p>${esc(row.note_text)}</p>
-      `
-    )}
+    ${
+      cards(
+        notes.data,
+        row => `
+          <h3>
+            ${esc(row.note_date)}
+          </h3>
+
+          <p>
+            ${esc(row.note_text)}
+          </p>
+        `
+      )
+    }
   `;
 
   document
-    .querySelector("#calendar-prev")
-    .addEventListener("click", () => {
-      state.calendarMonth = new Date(
-        state.calendarMonth.getFullYear(),
-        state.calendarMonth.getMonth() - 1,
-        1
-      );
+    .querySelector(
+      "#calendar-prev"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        state.calendarMonth =
+          new Date(
+            state.calendarMonth
+              .getFullYear(),
+            state.calendarMonth
+              .getMonth() - 1,
+            1
+          );
 
-      renderHome(page);
-    });
+        renderHome(page);
+      }
+    );
 
   document
-    .querySelector("#calendar-next")
-    .addEventListener("click", () => {
-      state.calendarMonth = new Date(
-        state.calendarMonth.getFullYear(),
-        state.calendarMonth.getMonth() + 1,
-        1
-      );
+    .querySelector(
+      "#calendar-next"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        state.calendarMonth =
+          new Date(
+            state.calendarMonth
+              .getFullYear(),
+            state.calendarMonth
+              .getMonth() + 1,
+            1
+          );
 
-      renderHome(page);
-    });
+        renderHome(page);
+      }
+    );
 }
 
 function buildMonthCalendar(
   monthStart,
   events
 ) {
-  const year = monthStart.getFullYear();
-  const month = monthStart.getMonth();
+  const year =
+    monthStart.getFullYear();
 
-  const firstDay = new Date(
-    year,
-    month,
-    1
-  ).getDay();
+  const month =
+    monthStart.getMonth();
 
-  const daysInMonth = new Date(
-    year,
-    month + 1,
-    0
-  ).getDate();
+  const firstDay =
+    new Date(
+      year,
+      month,
+      1
+    ).getDay();
 
-  const previousMonthDays = new Date(
-    year,
-    month,
-    0
-  ).getDate();
+  const daysInMonth =
+    new Date(
+      year,
+      month + 1,
+      0
+    ).getDate();
 
-  const todayDate = new Date();
+  const previousMonthDays =
+    new Date(
+      year,
+      month,
+      0
+    ).getDate();
+
+  const todayDate =
+    new Date();
 
   const dayNames = [
     "Sun",
@@ -396,13 +572,20 @@ function buildMonthCalendar(
     <div
       style="
         display:grid;
-        grid-template-columns:repeat(7,minmax(0,1fr));
+        grid-template-columns:
+          repeat(
+            7,
+            minmax(0,1fr)
+          );
         gap:4px;
       "
     >
   `;
 
-  for (const dayName of dayNames) {
+  for (
+    const dayName
+    of dayNames
+  ) {
     html += `
       <div
         style="
@@ -427,20 +610,24 @@ function buildMonthCalendar(
     let cellDate;
     let otherMonth = false;
 
-    if (cell < firstDay) {
+    if (
+      cell < firstDay
+    ) {
       dayNumber =
         previousMonthDays -
         firstDay +
         cell +
         1;
 
-      cellDate = new Date(
-        year,
-        month - 1,
-        dayNumber
-      );
+      cellDate =
+        new Date(
+          year,
+          month - 1,
+          dayNumber
+        );
 
       otherMonth = true;
+
     } else if (
       cell >=
       firstDay +
@@ -452,28 +639,33 @@ function buildMonthCalendar(
         daysInMonth +
         1;
 
-      cellDate = new Date(
-        year,
-        month + 1,
-        dayNumber
-      );
+      cellDate =
+        new Date(
+          year,
+          month + 1,
+          dayNumber
+        );
 
       otherMonth = true;
+
     } else {
       dayNumber =
         cell -
         firstDay +
         1;
 
-      cellDate = new Date(
-        year,
-        month,
-        dayNumber
-      );
+      cellDate =
+        new Date(
+          year,
+          month,
+          dayNumber
+        );
     }
 
     const dateString =
-      formatDate(cellDate);
+      formatDate(
+        cellDate
+      );
 
     const isToday =
       cellDate.getFullYear() ===
@@ -503,7 +695,8 @@ function buildMonthCalendar(
         style="
           min-height:105px;
           min-width:0;
-          border:1px solid var(--border);
+          border:1px solid
+            var(--border);
           border-radius:8px;
           padding:6px;
           background:${
@@ -550,27 +743,29 @@ function buildMonthCalendar(
 
         </div>
 
-        ${dayEvents
-          .map(
-            event => `
-              <div
-                style="
-                  font-size:.72rem;
-                  font-weight:700;
-                  padding:4px 5px;
-                  margin-bottom:4px;
-                  border-radius:6px;
-                  background:#e7f2ed;
-                  color:#004B2B;
-                  overflow:hidden;
-                  word-break:break-word;
-                "
-              >
-                ${esc(event.title)}
-              </div>
-            `
-          )
-          .join("")}
+        ${
+          dayEvents
+            .map(
+              event => `
+                <div
+                  style="
+                    font-size:.72rem;
+                    font-weight:700;
+                    padding:4px 5px;
+                    margin-bottom:4px;
+                    border-radius:6px;
+                    background:#e7f2ed;
+                    color:#004B2B;
+                    overflow:hidden;
+                    word-break:break-word;
+                  "
+                >
+                  ${esc(event.title)}
+                </div>
+              `
+            )
+            .join("")
+        }
 
       </div>
     `;
@@ -585,29 +780,43 @@ function buildMonthCalendar(
    APPLICATIONS
    ===================================================== */
 
-async function renderApplications(page) {
+async function renderApplications(
+  page
+) {
   const {
     data: products,
     error: productError
-  } = await db
-    .from("chemical_products")
-    .select(`
-      id,
-      product_name,
-      quantity,
-      unit
-    `)
-    .eq("active", true)
-    .order("product_name");
+  } =
+    await db
+      .from(
+        "chemical_products"
+      )
+      .select(`
+        id,
+        product_name,
+        quantity,
+        unit
+      `)
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "product_name"
+      );
 
   if (productError) {
     page.innerHTML = `
       <div class="heading">
-        <h2>Applications</h2>
+        <h2>
+          Applications
+        </h2>
       </div>
 
       <div class="empty">
-        ${esc(productError.message)}
+        ${esc(
+          productError.message
+        )}
       </div>
     `;
 
@@ -624,16 +833,76 @@ async function renderApplications(page) {
       <button
         id="toggle-application-form"
         class="primary"
+        type="button"
       >
         + New Application
       </button>
 
     </div>
 
+    <div
+      class="card"
+      style="margin-bottom:20px;"
+    >
+
+      <h3>
+        Monthly Application Summary
+      </h3>
+
+      <p class="meta">
+        Select a month to view
+        chemical usage totals and
+        all applications from that
+        month.
+      </p>
+
+      <div
+        style="
+          display:flex;
+          gap:10px;
+          align-items:flex-end;
+          flex-wrap:wrap;
+        "
+      >
+
+        <label
+          style="margin:0;"
+        >
+          Month
+
+          <input
+            id="application-summary-month"
+            type="month"
+            value="${
+              today().slice(0, 7)
+            }"
+          >
+        </label>
+
+        <button
+          id="view-application-summary"
+          class="primary"
+          type="button"
+        >
+          View Monthly Summary
+        </button>
+
+      </div>
+
+    </div>
+
+    <section
+      id="application-month-summary"
+    ></section>
+
     <form
       id="application-form"
       class="form hidden"
     >
+
+      <h3>
+        New Application
+      </h3>
 
       <div class="form-grid">
 
@@ -649,11 +918,23 @@ async function renderApplications(page) {
         </label>
 
         <label>
+          Application Time
+
+          <input
+            id="application_time"
+            type="time"
+            required
+            value="${currentTimeValue()}"
+          >
+        </label>
+
+        <label>
           Course
 
           <input
             id="application_course"
             type="text"
+            value="Brampton Golf Club"
           >
         </label>
 
@@ -701,8 +982,13 @@ async function renderApplications(page) {
           <input
             id="application_temperature"
             type="number"
-            step="any"
+            step="0.1"
           >
+
+          <span
+            id="weather-temperature-status"
+            class="meta"
+          ></span>
         </label>
 
         <label>
@@ -711,11 +997,22 @@ async function renderApplications(page) {
           <input
             id="application_wind"
             type="number"
-            step="any"
+            step="0.1"
           >
+
+          <span
+            id="weather-wind-status"
+            class="meta"
+          ></span>
         </label>
 
       </div>
+
+      <div
+        id="weather-status"
+        class="meta"
+        style="margin-bottom:18px;"
+      ></div>
 
       <h3>
         Products
@@ -748,9 +1045,17 @@ async function renderApplications(page) {
         Save Application
       </button>
 
-      <p id="application-message"></p>
+      <p
+        id="application-message"
+      ></p>
 
     </form>
+
+    <h3
+      style="margin-top:24px;"
+    >
+      Application History
+    </h3>
 
     <section
       id="application-list"
@@ -758,20 +1063,73 @@ async function renderApplications(page) {
     ></section>
   `;
 
+  const toggleButton =
+    document.querySelector(
+      "#toggle-application-form"
+    );
+
+  toggleButton.addEventListener(
+    "click",
+    async () => {
+      const form =
+        document.querySelector(
+          "#application-form"
+        );
+
+      form.classList.toggle(
+        "hidden"
+      );
+
+      if (
+        !form.classList.contains(
+          "hidden"
+        )
+      ) {
+        await autofillApplicationWeather();
+      }
+    }
+  );
+
   document
     .querySelector(
-      "#toggle-application-form"
+      "#view-application-summary"
     )
     .addEventListener(
       "click",
-      () => {
-        document
-          .querySelector(
-            "#application-form"
-          )
-          .classList
-          .toggle("hidden");
+      async () => {
+        const month =
+          document
+            .querySelector(
+              "#application-summary-month"
+            )
+            .value;
+
+        await loadApplicationMonthSummary(
+          month
+        );
       }
+    );
+
+  const applicationDateInput =
+    document.querySelector(
+      "#application_date"
+    );
+
+  const applicationTimeInput =
+    document.querySelector(
+      "#application_time"
+    );
+
+  applicationDateInput
+    .addEventListener(
+      "change",
+      autofillApplicationWeather
+    );
+
+  applicationTimeInput
+    .addEventListener(
+      "change",
+      autofillApplicationWeather
     );
 
   const productRows =
@@ -786,6 +1144,7 @@ async function renderApplications(page) {
       );
 
     row.className = "card";
+
     row.style.marginBottom =
       "12px";
 
@@ -804,36 +1163,38 @@ async function renderApplications(page) {
               Choose product…
             </option>
 
-            ${products
-              .map(
-                product => `
-                  <option
-                    value="${product.id}"
-                    data-stock="${
-                      product.quantity ?? 0
-                    }"
-                    data-unit="${esc(
-                      product.unit || ""
-                    )}"
-                  >
-                    ${esc(
-                      product.product_name
-                    )}
-                    —
-                    ${esc(
-                      String(
-                        product.quantity ??
-                        0
-                      )
-                    )}
-                    ${esc(
-                      product.unit || ""
-                    )}
-                    available
-                  </option>
-                `
-              )
-              .join("")}
+            ${
+              products
+                .map(
+                  product => `
+                    <option
+                      value="${product.id}"
+                      data-stock="${
+                        product.quantity ?? 0
+                      }"
+                      data-unit="${esc(
+                        product.unit || ""
+                      )}"
+                    >
+                      ${esc(
+                        product.product_name
+                      )}
+                      —
+                      ${esc(
+                        String(
+                          product.quantity ??
+                          0
+                        )
+                      )}
+                      ${esc(
+                        product.unit || ""
+                      )}
+                      available
+                    </option>
+                  `
+                )
+                .join("")
+            }
 
           </select>
         </label>
@@ -904,8 +1265,9 @@ async function renderApplications(page) {
         "click",
         () => {
           if (
-            productRows.children.length <=
-            1
+            productRows
+              .children
+              .length <= 1
           ) {
             return;
           }
@@ -914,7 +1276,8 @@ async function renderApplications(page) {
         }
       );
 
-    productRows.appendChild(row);
+    productRows
+      .appendChild(row);
   }
 
   addProductRow();
@@ -945,6 +1308,793 @@ async function renderApplications(page) {
   await loadApplications();
 }
 
+/* =====================================================
+   APPLICATION WEATHER AUTO-FILL
+   ===================================================== */
+
+async function autofillApplicationWeather() {
+  const dateInput =
+    document.querySelector(
+      "#application_date"
+    );
+
+  const timeInput =
+    document.querySelector(
+      "#application_time"
+    );
+
+  const temperatureInput =
+    document.querySelector(
+      "#application_temperature"
+    );
+
+  const windInput =
+    document.querySelector(
+      "#application_wind"
+    );
+
+  const temperatureStatus =
+    document.querySelector(
+      "#weather-temperature-status"
+    );
+
+  const windStatus =
+    document.querySelector(
+      "#weather-wind-status"
+    );
+
+  const overallStatus =
+    document.querySelector(
+      "#weather-status"
+    );
+
+  if (
+    !dateInput ||
+    !timeInput ||
+    !temperatureInput ||
+    !windInput
+  ) {
+    return;
+  }
+
+  const date =
+    dateInput.value;
+
+  const time =
+    timeInput.value;
+
+  if (
+    !date ||
+    !time
+  ) {
+    return;
+  }
+
+  temperatureStatus.textContent =
+    "Loading weather…";
+
+  windStatus.textContent =
+    "Loading weather…";
+
+  overallStatus.textContent =
+    "Getting Brampton Golf Club weather…";
+
+  try {
+    const todayString =
+      today();
+
+    let apiUrl;
+
+    if (
+      date < todayString
+    ) {
+      apiUrl =
+        "https://archive-api.open-meteo.com/v1/archive" +
+        `?latitude=${BRAMPTON_GOLF_LAT}` +
+        `&longitude=${BRAMPTON_GOLF_LON}` +
+        `&start_date=${date}` +
+        `&end_date=${date}` +
+        "&hourly=temperature_2m,wind_speed_10m" +
+        "&temperature_unit=celsius" +
+        "&wind_speed_unit=kmh" +
+        "&timezone=America%2FToronto";
+    } else {
+      apiUrl =
+        "https://api.open-meteo.com/v1/forecast" +
+        `?latitude=${BRAMPTON_GOLF_LAT}` +
+        `&longitude=${BRAMPTON_GOLF_LON}` +
+        `&start_date=${date}` +
+        `&end_date=${date}` +
+        "&hourly=temperature_2m,wind_speed_10m" +
+        "&temperature_unit=celsius" +
+        "&wind_speed_unit=kmh" +
+        "&timezone=America%2FToronto";
+    }
+
+    const response =
+      await fetch(apiUrl);
+
+    if (!response.ok) {
+      throw new Error(
+        "Weather service unavailable."
+      );
+    }
+
+    const weather =
+      await response.json();
+
+    if (
+      !weather.hourly ||
+      !Array.isArray(
+        weather.hourly.time
+      )
+    ) {
+      throw new Error(
+        "No weather data available for this date."
+      );
+    }
+
+    const selectedMinutes =
+      timeToMinutes(
+        time
+      );
+
+    let closestIndex = -1;
+    let closestDifference =
+      Infinity;
+
+    weather.hourly.time
+      .forEach(
+        (
+          weatherTime,
+          index
+        ) => {
+          const weatherClock =
+            weatherTime.slice(
+              11,
+              16
+            );
+
+          const weatherMinutes =
+            timeToMinutes(
+              weatherClock
+            );
+
+          const difference =
+            Math.abs(
+              weatherMinutes -
+              selectedMinutes
+            );
+
+          if (
+            difference <
+            closestDifference
+          ) {
+            closestDifference =
+              difference;
+
+            closestIndex =
+              index;
+          }
+        }
+      );
+
+    if (
+      closestIndex === -1
+    ) {
+      throw new Error(
+        "Could not match weather to the selected application time."
+      );
+    }
+
+    const temperature =
+      weather.hourly
+        .temperature_2m[
+          closestIndex
+        ];
+
+    const wind =
+      weather.hourly
+        .wind_speed_10m[
+          closestIndex
+        ];
+
+    const matchedTime =
+      weather.hourly.time[
+        closestIndex
+      ].slice(
+        11,
+        16
+      );
+
+    if (
+      temperature != null &&
+      Number.isFinite(
+        Number(
+          temperature
+        )
+      )
+    ) {
+      temperatureInput.value =
+        Number(
+          temperature
+        ).toFixed(1);
+
+      temperatureStatus.textContent =
+        `Auto-filled using ${formatTimeForDisplay(
+          matchedTime
+        )} weather`;
+    } else {
+      temperatureStatus.textContent =
+        "Temperature unavailable.";
+    }
+
+    if (
+      wind != null &&
+      Number.isFinite(
+        Number(wind)
+      )
+    ) {
+      windInput.value =
+        Number(
+          wind
+        ).toFixed(1);
+
+      windStatus.textContent =
+        `Auto-filled using ${formatTimeForDisplay(
+          matchedTime
+        )} weather`;
+    } else {
+      windStatus.textContent =
+        "Wind unavailable.";
+    }
+
+    overallStatus.textContent =
+      `Weather loaded for Brampton Golf Club near ${formatTimeForDisplay(
+        matchedTime
+      )}. You can manually change the values before saving.`;
+
+  } catch (error) {
+    console.error(
+      "Weather lookup error:",
+      error
+    );
+
+    temperatureStatus.textContent =
+      "Enter manually.";
+
+    windStatus.textContent =
+      "Enter manually.";
+
+    overallStatus.textContent =
+      "Weather could not be loaded. Temperature and wind can still be entered manually.";
+  }
+}
+
+/* =====================================================
+   MONTHLY APPLICATION SUMMARY
+   ===================================================== */
+
+async function loadApplicationMonthSummary(
+  monthValue
+) {
+  const box =
+    document.querySelector(
+      "#application-month-summary"
+    );
+
+  if (
+    !box ||
+    !monthValue
+  ) {
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="empty">
+      Loading monthly summary…
+    </div>
+  `;
+
+  const [
+    year,
+    month
+  ] =
+    monthValue
+      .split("-")
+      .map(Number);
+
+  const startDate =
+    `${year}-${String(
+      month
+    ).padStart(
+      2,
+      "0"
+    )}-01`;
+
+  let nextYear = year;
+  let nextMonth =
+    month + 1;
+
+  if (
+    nextMonth === 13
+  ) {
+    nextMonth = 1;
+    nextYear++;
+  }
+
+  const endDate =
+    `${nextYear}-${String(
+      nextMonth
+    ).padStart(
+      2,
+      "0"
+    )}-01`;
+
+  const {
+    data,
+    error
+  } =
+    await db
+      .from(
+        "applications"
+      )
+      .select(`
+        id,
+        application_date,
+        application_time,
+        course,
+        area,
+        holes,
+        applicator_name,
+        tank_count,
+        temperature_c,
+        wind_kmh,
+        notes,
+
+        application_products (
+          id,
+          quantity_used,
+          product_id,
+
+          chemical_products (
+            product_name,
+            unit
+          )
+        )
+      `)
+      .gte(
+        "application_date",
+        startDate
+      )
+      .lt(
+        "application_date",
+        endDate
+      )
+      .order(
+        "application_date",
+        {
+          ascending: true
+        }
+      );
+
+  if (error) {
+    box.innerHTML = `
+      <div class="empty">
+        ${esc(
+          error.message
+        )}
+      </div>
+    `;
+
+    return;
+  }
+
+  const monthTitle =
+    new Date(
+      year,
+      month - 1,
+      1
+    ).toLocaleDateString(
+      "en-CA",
+      {
+        month: "long",
+        year: "numeric"
+      }
+    );
+
+  if (
+    !data?.length
+  ) {
+    box.innerHTML = `
+      <div
+        class="card"
+        style="margin-bottom:20px;"
+      >
+
+        <h2>
+          ${esc(monthTitle)}
+          Application Summary
+        </h2>
+
+        <p>
+          No applications were
+          recorded for this month.
+        </p>
+
+      </div>
+    `;
+
+    return;
+  }
+
+  const productTotals = {};
+
+  let totalProductEntries = 0;
+
+  data.forEach(
+    application => {
+      const products =
+        application
+          .application_products ||
+        [];
+
+      products.forEach(
+        item => {
+          totalProductEntries++;
+
+          const chemical =
+            item
+              .chemical_products;
+
+          const name =
+            chemical
+              ?.product_name ||
+            "Unknown Product";
+
+          const unit =
+            chemical?.unit ||
+            "";
+
+          const key =
+            `${name}|||${unit}`;
+
+          if (
+            !productTotals[
+              key
+            ]
+          ) {
+            productTotals[
+              key
+            ] = {
+              name,
+              unit,
+              quantity: 0
+            };
+          }
+
+          productTotals[
+            key
+          ].quantity +=
+            Number(
+              item
+                .quantity_used ||
+              0
+            );
+        }
+      );
+    }
+  );
+
+  const totals =
+    Object.values(
+      productTotals
+    ).sort(
+      (a, b) =>
+        a.name.localeCompare(
+          b.name
+        )
+    );
+
+  box.innerHTML = `
+    <div
+      class="card"
+      style="margin-bottom:24px;"
+    >
+
+      <h2
+        style="color:var(--navy);"
+      >
+        ${esc(monthTitle)}
+        Application Summary
+      </h2>
+
+      <div class="grid">
+
+        <div class="card">
+
+          <div class="meta">
+            Applications
+          </div>
+
+          <h3>
+            ${data.length}
+          </h3>
+
+        </div>
+
+        <div class="card">
+
+          <div class="meta">
+            Different Products
+          </div>
+
+          <h3>
+            ${totals.length}
+          </h3>
+
+        </div>
+
+        <div class="card">
+
+          <div class="meta">
+            Product Entries
+          </div>
+
+          <h3>
+            ${totalProductEntries}
+          </h3>
+
+        </div>
+
+      </div>
+
+      <h3
+        style="margin-top:26px;"
+      >
+        Product Totals
+      </h3>
+
+      <div class="list">
+
+        ${
+          totals
+            .map(
+              product => `
+                <article
+                  class="card row"
+                >
+
+                  <div>
+
+                    <h3>
+                      ${esc(
+                        product.name
+                      )}
+                    </h3>
+
+                    <p class="meta">
+                      Total used during
+                      ${esc(
+                        monthTitle
+                      )}
+                    </p>
+
+                  </div>
+
+                  <div>
+
+                    <span class="tag">
+                      ${esc(
+                        formatQuantity(
+                          product.quantity
+                        )
+                      )}
+                      ${esc(
+                        product.unit
+                      )}
+                    </span>
+
+                  </div>
+
+                </article>
+              `
+            )
+            .join("")
+        }
+
+      </div>
+
+      <h3
+        style="margin-top:28px;"
+      >
+        Applications
+      </h3>
+
+      <div class="list">
+
+        ${
+          data
+            .map(
+              application => {
+                const products =
+                  application
+                    .application_products ||
+                  [];
+
+                return `
+                  <article
+                    class="card"
+                  >
+
+                    <h3>
+                      ${formatDisplayDate(
+                        application
+                          .application_date
+                      )}
+
+                      ${
+                        application
+                          .application_time
+                          ? `
+                            ·
+                            ${formatTimeForDisplay(
+                              application
+                                .application_time
+                            )}
+                          `
+                          : ""
+                      }
+                    </h3>
+
+                    ${
+                      application.course ||
+                      application.area ||
+                      application.holes
+                        ? `
+                          <p class="meta">
+                            ${esc(
+                              [
+                                application.course,
+                                application.area,
+                                application.holes
+                              ]
+                                .filter(
+                                  Boolean
+                                )
+                                .join(
+                                  " · "
+                                )
+                            )}
+                          </p>
+                        `
+                        : ""
+                    }
+
+                    <p>
+                      ${
+                        products
+                          .map(
+                            item => {
+                              const chemical =
+                                item
+                                  .chemical_products;
+
+                              return `
+                                <span
+                                  class="tag"
+                                >
+                                  ${esc(
+                                    chemical
+                                      ?.product_name ||
+                                    "Product"
+                                  )}
+                                  —
+                                  ${esc(
+                                    formatQuantity(
+                                      Number(
+                                        item
+                                          .quantity_used ||
+                                        0
+                                      )
+                                    )
+                                  )}
+                                  ${esc(
+                                    chemical
+                                      ?.unit ||
+                                    ""
+                                  )}
+                                </span>
+                              `;
+                            }
+                          )
+                          .join(" ")
+                      }
+                    </p>
+
+                    ${
+                      application
+                        .applicator_name
+                        ? `
+                          <p>
+                            <strong>
+                              Applicator:
+                            </strong>
+                            ${esc(
+                              application
+                                .applicator_name
+                            )}
+                          </p>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      application
+                        .temperature_c !=
+                        null
+                        ? `
+                          <p class="meta">
+                            Temperature:
+                            ${esc(
+                              formatQuantity(
+                                application
+                                  .temperature_c
+                              )
+                            )}°C
+                          </p>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      application
+                        .wind_kmh !=
+                        null
+                        ? `
+                          <p class="meta">
+                            Wind:
+                            ${esc(
+                              formatQuantity(
+                                application
+                                  .wind_kmh
+                              )
+                            )}
+                            km/h
+                          </p>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      application.notes
+                        ? `
+                          <p>
+                            ${esc(
+                              application.notes
+                            )}
+                          </p>
+                        `
+                        : ""
+                    }
+
+                  </article>
+                `;
+              }
+            )
+            .join("")
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+/* =====================================================
+   SAVE APPLICATION
+   ===================================================== */
+
 async function saveApplication(
   event,
   products
@@ -959,12 +2109,15 @@ async function saveApplication(
   message.textContent = "";
 
   const rows = [
-    ...document.querySelectorAll(
-      "#application-product-rows > .card"
-    )
+    ...document
+      .querySelectorAll(
+        "#application-product-rows > .card"
+      )
   ];
 
-  if (!rows.length) {
+  if (
+    !rows.length
+  ) {
     message.textContent =
       "Add at least one product.";
 
@@ -975,7 +2128,8 @@ async function saveApplication(
     [];
 
   for (
-    const row of rows
+    const row
+    of rows
   ) {
     const productId =
       row
@@ -995,7 +2149,9 @@ async function saveApplication(
 
     if (
       !productId ||
-      !Number.isFinite(quantity) ||
+      !Number.isFinite(
+        quantity
+      ) ||
       quantity <= 0
     ) {
       message.textContent =
@@ -1026,7 +2182,9 @@ async function saveApplication(
 
     if (
       product &&
-      Number(product.quantity) <
+      Number(
+        product.quantity
+      ) <
         quantity
     ) {
       message.textContent =
@@ -1053,6 +2211,14 @@ async function saveApplication(
           "#application_date"
         )
         .value,
+
+    application_time:
+      document
+        .querySelector(
+          "#application_time"
+        )
+        .value ||
+      null,
 
     course:
       nullable(
@@ -1098,11 +2264,14 @@ async function saveApplication(
   const {
     data: application,
     error
-  } = await db
-    .from("applications")
-    .insert(payload)
-    .select()
-    .single();
+  } =
+    await db
+      .from(
+        "applications"
+      )
+      .insert(payload)
+      .select()
+      .single();
 
   if (error) {
     message.textContent =
@@ -1112,27 +2281,31 @@ async function saveApplication(
   }
 
   for (
-    const product of
-    selectedProducts
+    const product
+    of selectedProducts
   ) {
     const {
-      error: productError
-    } = await db
-      .from(
-        "application_products"
-      )
-      .insert({
-        application_id:
-          application.id,
+      error:
+        productError
+    } =
+      await db
+        .from(
+          "application_products"
+        )
+        .insert({
+          application_id:
+            application.id,
 
-        product_id:
-          product.product_id,
+          product_id:
+            product.product_id,
 
-        quantity_used:
-          product.quantity_used
-      });
+          quantity_used:
+            product.quantity_used
+        });
 
-    if (productError) {
+    if (
+      productError
+    ) {
       await db
         .from(
           "application_products"
@@ -1144,7 +2317,9 @@ async function saveApplication(
         );
 
       await db
-        .from("applications")
+        .from(
+          "applications"
+        )
         .delete()
         .eq(
           "id",
@@ -1164,17 +2339,37 @@ async function saveApplication(
     .querySelector(
       "#application_date"
     )
-    .value = today();
+    .value =
+    today();
+
+  document
+    .querySelector(
+      "#application_time"
+    )
+    .value =
+    currentTimeValue();
+
+  document
+    .querySelector(
+      "#application_course"
+    )
+    .value =
+    "Brampton Golf Club";
 
   document
     .querySelector(
       "#application-form"
     )
-    .classList
-    .add("hidden");
+    .classList.add(
+      "hidden"
+    );
 
   await loadApplications();
 }
+
+/* =====================================================
+   APPLICATION HISTORY
+   ===================================================== */
 
 async function loadApplications() {
   const box =
@@ -1191,56 +2386,64 @@ async function loadApplications() {
   const {
     data,
     error
-  } = await db
-    .from("applications")
-    .select(`
-      id,
-      application_date,
-      course,
-      area,
-      holes,
-      applicator_name,
-      tank_count,
-      temperature_c,
-      wind_kmh,
-      notes,
-      created_at,
-
-      application_products (
-        id,
-        quantity_used,
-        product_id,
-
-        chemical_products (
-          product_name,
-          unit
-        )
+  } =
+    await db
+      .from(
+        "applications"
       )
-    `)
-    .order(
-      "application_date",
-      {
-        ascending: false
-      }
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false
-      }
-    );
+      .select(`
+        id,
+        application_date,
+        application_time,
+        course,
+        area,
+        holes,
+        applicator_name,
+        tank_count,
+        temperature_c,
+        wind_kmh,
+        notes,
+        created_at,
+
+        application_products (
+          id,
+          quantity_used,
+          product_id,
+
+          chemical_products (
+            product_name,
+            unit
+          )
+        )
+      `)
+      .order(
+        "application_date",
+        {
+          ascending: false
+        }
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
 
   if (error) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(error.message)}
+        ${esc(
+          error.message
+        )}
       </div>
     `;
 
     return;
   }
 
-  if (!data?.length) {
+  if (
+    !data?.length
+  ) {
     box.innerHTML = `
       <div class="empty">
         No applications yet.
@@ -1252,229 +2455,267 @@ async function loadApplications() {
 
   box.innerHTML =
     data
-      .map(application => {
-        const products =
-          application
-            .application_products ||
-          [];
+      .map(
+        application => {
+          const products =
+            application
+              .application_products ||
+            [];
 
-        return `
-          <article class="card row">
+          return `
+            <article
+              class="card row"
+            >
 
-            <div>
+              <div>
 
-              <h3>
-                ${esc(
-                  application
-                    .application_date
-                )}
-              </h3>
+                <h3>
+                  ${formatDisplayDate(
+                    application
+                      .application_date
+                  )}
 
-              <p class="meta">
-                ${esc(
-                  [
-                    application.course,
-                    application.area,
-                    application.holes
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                )}
-              </p>
-
-              <p>
-                ${products
-                  .map(item => {
-                    const chemical =
-                      item
-                        .chemical_products;
-
-                    return `
-                      <span class="tag">
-                        ${esc(
-                          chemical
-                            ?.product_name ||
-                          "Product"
+                  ${
+                    application
+                      .application_time
+                      ? `
+                        ·
+                        ${formatTimeForDisplay(
+                          application
+                            .application_time
                         )}
-                        —
+                      `
+                      : ""
+                  }
+                </h3>
+
+                <p class="meta">
+                  ${esc(
+                    [
+                      application.course,
+                      application.area,
+                      application.holes
+                    ]
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " · "
+                      )
+                  )}
+                </p>
+
+                <p>
+                  ${
+                    products
+                      .map(
+                        item => {
+                          const chemical =
+                            item
+                              .chemical_products;
+
+                          return `
+                            <span
+                              class="tag"
+                            >
+                              ${esc(
+                                chemical
+                                  ?.product_name ||
+                                "Product"
+                              )}
+                              —
+                              ${esc(
+                                formatQuantity(
+                                  item
+                                    .quantity_used
+                                )
+                              )}
+                              ${esc(
+                                chemical
+                                  ?.unit ||
+                                ""
+                              )}
+                            </span>
+                          `;
+                        }
+                      )
+                      .join(" ")
+                  }
+                </p>
+
+                ${
+                  application
+                    .applicator_name
+                    ? `
+                      <p>
+                        Applicator:
                         ${esc(
-                          String(
-                            item.quantity_used
+                          application
+                            .applicator_name
+                        )}
+                      </p>
+                    `
+                    : ""
+                }
+
+                ${
+                  application
+                    .tank_count !=
+                    null
+                    ? `
+                      <p>
+                        Tanks:
+                        ${esc(
+                          formatQuantity(
+                            application
+                              .tank_count
                           )
                         )}
+                      </p>
+                    `
+                    : ""
+                }
+
+                ${
+                  application
+                    .temperature_c !=
+                    null
+                    ? `
+                      <p class="meta">
+                        Temperature:
                         ${esc(
-                          chemical?.unit ||
-                          ""
+                          formatQuantity(
+                            application
+                              .temperature_c
+                          )
+                        )}°C
+                      </p>
+                    `
+                    : ""
+                }
+
+                ${
+                  application
+                    .wind_kmh !=
+                    null
+                    ? `
+                      <p class="meta">
+                        Wind:
+                        ${esc(
+                          formatQuantity(
+                            application
+                              .wind_kmh
+                          )
                         )}
-                      </span>
-                    `;
-                  })
-                  .join(" ")}
-              </p>
+                        km/h
+                      </p>
+                    `
+                    : ""
+                }
 
-              ${
-                application
-                  .applicator_name
-                  ? `
-                    <p>
-                      Applicator:
-                      ${esc(
-                        application
-                          .applicator_name
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
+                ${
+                  application.notes
+                    ? `
+                      <p>
+                        ${esc(
+                          application.notes
+                        )}
+                      </p>
+                    `
+                    : ""
+                }
 
-              ${
-                application
-                  .tank_count != null
-                  ? `
-                    <p>
-                      Tanks:
-                      ${esc(
-                        String(
-                          application
-                            .tank_count
-                        )
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
+              </div>
 
-              ${
-                application
-                  .temperature_c !=
-                  null
-                  ? `
-                    <p class="meta">
-                      Temperature:
-                      ${esc(
-                        String(
-                          application
-                            .temperature_c
-                        )
-                      )}°C
-                    </p>
-                  `
-                  : ""
-              }
+              <button
+                class="delete delete-application"
+                data-id="${application.id}"
+                type="button"
+              >
+                Delete
+              </button>
 
-              ${
-                application
-                  .wind_kmh != null
-                  ? `
-                    <p class="meta">
-                      Wind:
-                      ${esc(
-                        String(
-                          application
-                            .wind_kmh
-                        )
-                      )}
-                      km/h
-                    </p>
-                  `
-                  : ""
-              }
-
-              ${
-                application.notes
-                  ? `
-                    <p>
-                      ${esc(
-                        application.notes
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-            </div>
-
-            <button
-              class="delete delete-application"
-              data-id="${application.id}"
-            >
-              Delete
-            </button>
-
-          </article>
-        `;
-      })
+            </article>
+          `;
+        }
+      )
       .join("");
 
   box
     .querySelectorAll(
       ".delete-application"
     )
-    .forEach(button => {
-      button.addEventListener(
-        "click",
-        async () => {
-          const appId =
-            button.dataset.id;
+    .forEach(
+      button => {
+        button.addEventListener(
+          "click",
+          async () => {
+            const appId =
+              button.dataset.id;
 
-          if (
-            !confirm(
-              "Delete this application? The products will be returned to inventory."
-            )
-          ) {
-            return;
-          }
+            if (
+              !confirm(
+                "Delete this application? The products will be returned to inventory."
+              )
+            ) {
+              return;
+            }
 
-          const {
-            error:
+            const {
+              error:
+                productDeleteError
+            } =
+              await db
+                .from(
+                  "application_products"
+                )
+                .delete()
+                .eq(
+                  "application_id",
+                  appId
+                );
+
+            if (
               productDeleteError
-          } = await db
-            .from(
-              "application_products"
-            )
-            .delete()
-            .eq(
-              "application_id",
-              appId
-            );
+            ) {
+              alert(
+                productDeleteError
+                  .message
+              );
 
-          if (
-            productDeleteError
-          ) {
-            alert(
-              productDeleteError
-                .message
-            );
+              return;
+            }
 
-            return;
-          }
+            const {
+              error:
+                applicationDeleteError
+            } =
+              await db
+                .from(
+                  "applications"
+                )
+                .delete()
+                .eq(
+                  "id",
+                  appId
+                );
 
-          const {
-            error:
+            if (
               applicationDeleteError
-          } = await db
-            .from("applications")
-            .delete()
-            .eq(
-              "id",
-              appId
-            );
+            ) {
+              alert(
+                applicationDeleteError
+                  .message
+              );
 
-          if (
-            applicationDeleteError
-          ) {
-            alert(
-              applicationDeleteError
-                .message
-            );
+              return;
+            }
 
-            return;
+            await loadApplications();
           }
-
-          await loadApplications();
-        }
-      );
-    });
+        );
+      }
+    );
 }
 
 /* =====================================================
@@ -1487,13 +2728,19 @@ async function renderChemicalInventory(
   const {
     data: products,
     error
-  } = await db
-    .from(
-      "chemical_products"
-    )
-    .select("*")
-    .eq("active", true)
-    .order("product_name");
+  } =
+    await db
+      .from(
+        "chemical_products"
+      )
+      .select("*")
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "product_name"
+      );
 
   if (error) {
     page.innerHTML = `
@@ -1504,7 +2751,9 @@ async function renderChemicalInventory(
       </div>
 
       <div class="empty">
-        ${esc(error.message)}
+        ${esc(
+          error.message
+        )}
       </div>
     `;
 
@@ -1513,9 +2762,11 @@ async function renderChemicalInventory(
 
   page.innerHTML = `
     <div class="heading">
+
       <h2>
         Chemical Inventory
       </h2>
+
     </div>
 
     <div
@@ -1530,6 +2781,7 @@ async function renderChemicalInventory(
       <button
         id="show-add-product"
         class="primary"
+        type="button"
       >
         + Add Product
       </button>
@@ -1537,6 +2789,7 @@ async function renderChemicalInventory(
       <button
         id="show-receive-stock"
         class="primary"
+        type="button"
       >
         + Receive Inventory
       </button>
@@ -1544,21 +2797,36 @@ async function renderChemicalInventory(
       <button
         id="show-adjust-stock"
         class="primary"
+        type="button"
       >
         Adjust Inventory
+      </button>
+
+      <button
+        id="show-inventory-report"
+        class="primary"
+        type="button"
+      >
+        Monthly Inventory PDF
       </button>
 
     </div>
 
     ${addChemicalForm()}
 
-    ${receiveInventoryForm(
-      products
-    )}
+    ${
+      receiveInventoryForm(
+        products
+      )
+    }
 
-    ${adjustInventoryForm(
-      products
-    )}
+    ${
+      adjustInventoryForm(
+        products
+      )
+    }
+
+    ${inventoryReportForm()}
 
     <section
       id="chemical-list"
@@ -1566,9 +2834,7 @@ async function renderChemicalInventory(
     ></section>
 
     <h3
-      style="
-        margin-top:28px;
-      "
+      style="margin-top:28px;"
     >
       Recent Inventory Activity
     </h3>
@@ -1592,8 +2858,9 @@ async function renderChemicalInventory(
           .querySelector(
             "#add-product-form"
           )
-          .classList
-          .remove("hidden");
+          .classList.remove(
+            "hidden"
+          );
       }
     );
 
@@ -1610,8 +2877,9 @@ async function renderChemicalInventory(
           .querySelector(
             "#receive-stock-form"
           )
-          .classList
-          .remove("hidden");
+          .classList.remove(
+            "hidden"
+          );
       }
     );
 
@@ -1628,8 +2896,28 @@ async function renderChemicalInventory(
           .querySelector(
             "#adjust-stock-form"
           )
-          .classList
-          .remove("hidden");
+          .classList.remove(
+            "hidden"
+          );
+      }
+    );
+
+  document
+    .querySelector(
+      "#show-inventory-report"
+    )
+    .addEventListener(
+      "click",
+      () => {
+        hideInventoryForms();
+
+        document
+          .querySelector(
+            "#inventory-report-form"
+          )
+          .classList.remove(
+            "hidden"
+          );
       }
     );
 
@@ -1660,6 +2948,15 @@ async function renderChemicalInventory(
       adjustInventory
     );
 
+  document
+    .querySelector(
+      "#inventory-report-form"
+    )
+    .addEventListener(
+      "submit",
+      generateInventoryPdf
+    );
+
   renderChemicalCards(
     products
   );
@@ -1671,14 +2968,909 @@ function hideInventoryForms() {
   [
     "#add-product-form",
     "#receive-stock-form",
-    "#adjust-stock-form"
-  ].forEach(selector => {
-    document
-      .querySelector(selector)
-      ?.classList
-      .add("hidden");
-  });
+    "#adjust-stock-form",
+    "#inventory-report-form"
+  ].forEach(
+    selector => {
+      document
+        .querySelector(
+          selector
+        )
+        ?.classList.add(
+          "hidden"
+        );
+    }
+  );
 }
+
+/* =====================================================
+   MONTHLY INVENTORY PDF
+   ===================================================== */
+
+function inventoryReportForm() {
+  return `
+    <form
+      id="inventory-report-form"
+      class="form hidden"
+    >
+
+      <h3>
+        Monthly Inventory Report
+      </h3>
+
+      <p class="meta">
+        Choose a month to generate
+        the month-end inventory PDF.
+      </p>
+
+      <div class="form-grid">
+
+        <label>
+          Report Month
+
+          <input
+            id="inventory-report-month"
+            type="month"
+            required
+            value="${
+              today().slice(
+                0,
+                7
+              )
+            }"
+          >
+        </label>
+
+      </div>
+
+      <button
+        id="generate-inventory-pdf"
+        type="submit"
+        class="primary"
+      >
+        Generate PDF
+      </button>
+
+      <p
+        id="inventory-report-message"
+      ></p>
+
+    </form>
+  `;
+}
+
+async function generateInventoryPdf(
+  event
+) {
+  event.preventDefault();
+
+  const message =
+    document.querySelector(
+      "#inventory-report-message"
+    );
+
+  const button =
+    document.querySelector(
+      "#generate-inventory-pdf"
+    );
+
+  const monthValue =
+    document.querySelector(
+      "#inventory-report-month"
+    ).value;
+
+  if (
+    !monthValue
+  ) {
+    message.textContent =
+      "Choose a month.";
+
+    return;
+  }
+
+  message.textContent =
+    "Building report…";
+
+  button.disabled = true;
+
+  let previewWindow = null;
+
+  try {
+    previewWindow =
+      window.open(
+        "",
+        "_blank"
+      );
+
+    const [
+      year,
+      month
+    ] =
+      monthValue
+        .split("-")
+        .map(Number);
+
+    const startDate =
+      `${year}-${String(
+        month
+      ).padStart(
+        2,
+        "0"
+      )}-01`;
+
+    let nextYear =
+      year;
+
+    let nextMonth =
+      month + 1;
+
+    if (
+      nextMonth === 13
+    ) {
+      nextMonth = 1;
+      nextYear++;
+    }
+
+    const nextMonthDate =
+      `${nextYear}-${String(
+        nextMonth
+      ).padStart(
+        2,
+        "0"
+      )}-01`;
+
+    const monthEnd =
+      new Date(
+        year,
+        month,
+        0
+      );
+
+    const monthEndText =
+      monthEnd
+        .toLocaleDateString(
+          "en-CA",
+          {
+            month: "long",
+            day: "numeric",
+            year: "numeric"
+          }
+        );
+
+    const monthName =
+      monthEnd
+        .toLocaleDateString(
+          "en-CA",
+          {
+            month: "long",
+            year: "numeric"
+          }
+        );
+
+    const [
+      productResult,
+      transactionResult
+    ] =
+      await Promise.all([
+        db
+          .from(
+            "chemical_products"
+          )
+          .select(`
+            id,
+            product_name,
+            product_type,
+            unit,
+            active
+          `)
+          .order(
+            "product_name"
+          ),
+
+        db
+          .from(
+            "inventory_transactions"
+          )
+          .select(`
+            id,
+            product_id,
+            transaction_type,
+            quantity_change,
+            transaction_date
+          `)
+          .lt(
+            "transaction_date",
+            nextMonthDate
+          )
+          .order(
+            "transaction_date",
+            {
+              ascending: true
+            }
+          )
+      ]);
+
+    if (
+      productResult.error
+    ) {
+      throw productResult.error;
+    }
+
+    if (
+      transactionResult.error
+    ) {
+      throw transactionResult.error;
+    }
+
+    const products =
+      productResult.data ||
+      [];
+
+    const transactions =
+      transactionResult.data ||
+      [];
+
+    const reportRows = [];
+
+    products.forEach(
+      product => {
+        const productTransactions =
+          transactions.filter(
+            transaction =>
+              transaction.product_id ===
+              product.id
+          );
+
+        let opening = 0;
+        let received = 0;
+        let applied = 0;
+        let adjustments = 0;
+        let ending = 0;
+
+        productTransactions.forEach(
+          transaction => {
+            const amount =
+              Number(
+                transaction
+                  .quantity_change ||
+                0
+              );
+
+            const date =
+              transaction
+                .transaction_date;
+
+            ending += amount;
+
+            if (
+              date <
+              startDate
+            ) {
+              opening += amount;
+
+              return;
+            }
+
+            if (
+              transaction
+                .transaction_type ===
+              "delivery"
+            ) {
+              received += amount;
+
+              return;
+            }
+
+            if (
+              transaction
+                .transaction_type ===
+              "application"
+            ) {
+              applied +=
+                Math.abs(
+                  amount
+                );
+
+              return;
+            }
+
+            adjustments +=
+              amount;
+          }
+        );
+
+        const hadMonthActivity =
+          productTransactions.some(
+            transaction =>
+              transaction
+                .transaction_date >=
+                startDate &&
+              transaction
+                .transaction_date <
+                nextMonthDate
+          );
+
+        const shouldInclude =
+          Math.abs(opening) >
+            0.000001 ||
+          Math.abs(ending) >
+            0.000001 ||
+          hadMonthActivity;
+
+        if (
+          !shouldInclude
+        ) {
+          return;
+        }
+
+        reportRows.push({
+          product_name:
+            product.product_name,
+
+          product_type:
+            product.product_type ||
+            "other",
+
+          unit:
+            product.unit || "",
+
+          opening,
+          received,
+          applied,
+          adjustments,
+          ending
+        });
+      }
+    );
+
+    if (
+      !reportRows.length
+    ) {
+      if (
+        previewWindow
+      ) {
+        previewWindow.close();
+      }
+
+      message.textContent =
+        "No inventory records were found for that month.";
+
+      return;
+    }
+
+    await ensurePdfLibraries();
+
+    const {
+      jsPDF
+    } =
+      window.jspdf;
+
+    const doc =
+      new jsPDF({
+        orientation:
+          "landscape",
+        unit: "pt",
+        format: "letter"
+      });
+
+    const pageWidth =
+      doc.internal.pageSize
+        .getWidth();
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(18);
+
+    doc.text(
+      "BRAMPTON GOLF CLUB",
+      pageWidth / 2,
+      40,
+      {
+        align: "center"
+      }
+    );
+
+    doc.setFontSize(14);
+
+    doc.text(
+      "Chemical Inventory — Month End Report",
+      pageWidth / 2,
+      62,
+      {
+        align: "center"
+      }
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(10);
+
+    doc.text(
+      `Inventory as of ${monthEndText}`,
+      pageWidth / 2,
+      80,
+      {
+        align: "center"
+      }
+    );
+
+    let currentY = 105;
+
+    const typeOrder = [
+      "fungicide",
+      "herbicide",
+      "insecticide",
+      "fertilizer",
+      "wetting_agent",
+      "growth_regulator",
+      "other"
+    ];
+
+    const typeLabels = {
+      fungicide:
+        "FUNGICIDES",
+
+      herbicide:
+        "HERBICIDES",
+
+      insecticide:
+        "INSECTICIDES",
+
+      fertilizer:
+        "FERTILIZERS",
+
+      wetting_agent:
+        "WETTING AGENTS",
+
+      growth_regulator:
+        "GROWTH REGULATORS",
+
+      other:
+        "OTHER"
+    };
+
+    const existingTypes =
+      [
+        ...new Set(
+          reportRows.map(
+            item =>
+              item.product_type ||
+              "other"
+          )
+        )
+      ];
+
+    const orderedTypes = [
+      ...typeOrder.filter(
+        type =>
+          existingTypes.includes(
+            type
+          )
+      ),
+
+      ...existingTypes.filter(
+        type =>
+          !typeOrder.includes(
+            type
+          )
+      )
+    ];
+
+    for (
+      const type
+      of orderedTypes
+    ) {
+      const group =
+        reportRows
+          .filter(
+            item =>
+              (
+                item.product_type ||
+                "other"
+              ) === type
+          )
+          .sort(
+            (a, b) =>
+              a.product_name
+                .localeCompare(
+                  b.product_name
+                )
+          );
+
+      if (
+        !group.length
+      ) {
+        continue;
+      }
+
+      if (
+        currentY >
+        doc.internal.pageSize
+          .getHeight() -
+          100
+      ) {
+        doc.addPage();
+
+        currentY = 45;
+      }
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.setFontSize(11);
+
+      doc.text(
+        typeLabels[type] ||
+          humanize(type)
+            .toUpperCase(),
+        40,
+        currentY
+      );
+
+      currentY += 8;
+
+      doc.autoTable({
+        startY: currentY,
+
+        margin: {
+          left: 40,
+          right: 40
+        },
+
+        head: [[
+          "Product",
+          "Opening",
+          "Received",
+          "Applied",
+          "Adjustments",
+          "Ending"
+        ]],
+
+        body:
+          group.map(
+            product => [
+              product
+                .product_name,
+
+              formatPdfQuantity(
+                product.opening,
+                product.unit
+              ),
+
+              formatPdfSignedQuantity(
+                product.received,
+                product.unit
+              ),
+
+              product.applied ===
+              0
+                ? formatPdfQuantity(
+                    0,
+                    product.unit
+                  )
+                : `-${formatPdfQuantity(
+                    product.applied,
+                    product.unit
+                  )}`,
+
+              formatPdfSignedQuantity(
+                product.adjustments,
+                product.unit
+              ),
+
+              formatPdfQuantity(
+                product.ending,
+                product.unit
+              )
+            ]
+          ),
+
+        styles: {
+          fontSize: 9,
+          cellPadding: 5
+        },
+
+        headStyles: {
+          fillColor: [
+            0,
+            103,
+            71
+          ],
+          textColor: [
+            255,
+            255,
+            255
+          ],
+          fontStyle: "bold"
+        },
+
+        alternateRowStyles: {
+          fillColor: [
+            245,
+            247,
+            246
+          ]
+        },
+
+        columnStyles: {
+          0: {
+            cellWidth: 210
+          }
+        },
+
+        didDrawPage: () => {
+          const height =
+            doc.internal.pageSize
+              .getHeight();
+
+          doc.setFontSize(8);
+
+          doc.setFont(
+            "helvetica",
+            "normal"
+          );
+
+          doc.text(
+            `Brampton Golf Club · ${monthName}`,
+            40,
+            height - 20
+          );
+
+          doc.text(
+            `Page ${doc.internal.getNumberOfPages()}`,
+            pageWidth - 40,
+            height - 20,
+            {
+              align: "right"
+            }
+          );
+        }
+      });
+
+      currentY =
+        doc.lastAutoTable
+          .finalY +
+        24;
+    }
+
+    const blob =
+      doc.output(
+        "blob"
+      );
+
+    const blobUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+    if (
+      previewWindow &&
+      !previewWindow.closed
+    ) {
+      previewWindow.location.href =
+        blobUrl;
+    } else {
+      doc.save(
+        `Brampton-Golf-Club-Inventory-${monthValue}.pdf`
+      );
+    }
+
+    setTimeout(
+      () => {
+        URL.revokeObjectURL(
+          blobUrl
+        );
+      },
+      60000
+    );
+
+    message.textContent =
+      `PDF created for ${monthName}.`;
+
+  } catch (error) {
+    if (
+      previewWindow &&
+      !previewWindow.closed
+    ) {
+      previewWindow.close();
+    }
+
+    console.error(
+      error
+    );
+
+    message.textContent =
+      error?.message ||
+      "Could not generate the PDF.";
+
+  } finally {
+    button.disabled =
+      false;
+  }
+}
+
+function formatPdfQuantity(
+  amount,
+  unit
+) {
+  return (
+    `${formatQuantity(
+      amount
+    )}` +
+    `${
+      unit
+        ? ` ${unit}`
+        : ""
+    }`
+  );
+}
+
+function formatPdfSignedQuantity(
+  amount,
+  unit
+) {
+  const number =
+    Number(
+      amount ||
+      0
+    );
+
+  const sign =
+    number > 0
+      ? "+"
+      : "";
+
+  return (
+    `${sign}${formatQuantity(
+      number
+    )}` +
+    `${
+      unit
+        ? ` ${unit}`
+        : ""
+    }`
+  );
+}
+
+async function ensurePdfLibraries() {
+  if (
+    !window.jspdf
+  ) {
+    await loadExternalScript(
+      "jspdf-library",
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    );
+  }
+
+  if (
+    !window.jspdf ||
+    !window.jspdf.jsPDF
+  ) {
+    throw new Error(
+      "PDF library could not be loaded."
+    );
+  }
+
+  const testDoc =
+    new window.jspdf.jsPDF();
+
+  if (
+    typeof testDoc.autoTable !==
+    "function"
+  ) {
+    await loadExternalScript(
+      "jspdf-autotable-library",
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"
+    );
+  }
+
+  const secondTestDoc =
+    new window.jspdf.jsPDF();
+
+  if (
+    typeof secondTestDoc.autoTable !==
+    "function"
+  ) {
+    throw new Error(
+      "PDF table library could not be loaded."
+    );
+  }
+}
+
+function loadExternalScript(
+  id,
+  src
+) {
+  return new Promise(
+    (
+      resolve,
+      reject
+    ) => {
+      const existing =
+        document.getElementById(
+          id
+        );
+
+      if (
+        existing
+      ) {
+        if (
+          existing.dataset.loaded ===
+          "true"
+        ) {
+          resolve();
+
+          return;
+        }
+
+        existing.addEventListener(
+          "load",
+          resolve,
+          {
+            once: true
+          }
+        );
+
+        existing.addEventListener(
+          "error",
+          () =>
+            reject(
+              new Error(
+                "Could not load PDF library."
+              )
+            ),
+          {
+            once: true
+          }
+        );
+
+        return;
+      }
+
+      const script =
+        document.createElement(
+          "script"
+        );
+
+      script.id = id;
+      script.src = src;
+      script.async = true;
+
+      script.onload =
+        () => {
+          script.dataset.loaded =
+            "true";
+
+          resolve();
+        };
+
+      script.onerror =
+        () => {
+          reject(
+            new Error(
+              "Could not load PDF library."
+            )
+          );
+        };
+
+      document.head.appendChild(
+        script
+      );
+    }
+  );
+}
+
+/* =====================================================
+   ADD CHEMICAL
+   ===================================================== */
 
 function addChemicalForm() {
   return `
@@ -1804,8 +3996,10 @@ function addChemicalForm() {
       </div>
 
       <p class="meta">
-        New products start at 0 inventory.
-        Use Receive Inventory after creating the product.
+        New products start at
+        0 inventory. Use Receive
+        Inventory after creating
+        the product.
       </p>
 
       <button
@@ -1833,7 +4027,8 @@ async function saveNewChemical(
       "#add-product-message"
     );
 
-  message.textContent = "";
+  message.textContent =
+    "";
 
   const payload = {
     product_name:
@@ -1854,7 +4049,8 @@ async function saveNewChemical(
         "new_manufacturer"
       ),
 
-    quantity: 0,
+    quantity:
+      0,
 
     unit:
       document
@@ -1873,18 +4069,22 @@ async function saveNewChemical(
         "new_reorder_level"
       ),
 
-    active: true
+    active:
+      true
   };
 
   const {
     error
-  } = await db
-    .from(
-      "chemical_products"
-    )
-    .insert(payload);
+  } =
+    await db
+      .from(
+        "chemical_products"
+      )
+      .insert(payload);
 
-  if (error) {
+  if (
+    error
+  ) {
     message.textContent =
       error.message;
 
@@ -1897,6 +4097,10 @@ async function saveNewChemical(
     )
   );
 }
+
+/* =====================================================
+   RECEIVE INVENTORY
+   ===================================================== */
 
 function receiveInventoryForm(
   products
@@ -1925,9 +4129,11 @@ function receiveInventoryForm(
               Choose product…
             </option>
 
-            ${productOptions(
-              products
-            )}
+            ${
+              productOptions(
+                products
+              )
+            }
 
           </select>
         </label>
@@ -1998,7 +4204,8 @@ async function receiveInventory(
       "#receive-message"
     );
 
-  message.textContent = "";
+  message.textContent =
+    "";
 
   const quantity =
     Number(
@@ -2058,13 +4265,16 @@ async function receiveInventory(
 
   const {
     error
-  } = await db
-    .from(
-      "inventory_transactions"
-    )
-    .insert(payload);
+  } =
+    await db
+      .from(
+        "inventory_transactions"
+      )
+      .insert(payload);
 
-  if (error) {
+  if (
+    error
+  ) {
     message.textContent =
       error.message;
 
@@ -2077,6 +4287,10 @@ async function receiveInventory(
     )
   );
 }
+
+/* =====================================================
+   ADJUST INVENTORY
+   ===================================================== */
 
 function adjustInventoryForm(
   products
@@ -2092,8 +4306,10 @@ function adjustInventoryForm(
       </h3>
 
       <p class="meta">
-        Enter a positive number to add inventory.
-        Enter a negative number to remove inventory.
+        Enter a positive number
+        to add inventory. Enter a
+        negative number to remove
+        inventory.
       </p>
 
       <div class="form-grid">
@@ -2110,9 +4326,11 @@ function adjustInventoryForm(
               Choose product…
             </option>
 
-            ${productOptions(
-              products
-            )}
+            ${
+              productOptions(
+                products
+              )
+            }
 
           </select>
         </label>
@@ -2221,7 +4439,8 @@ async function adjustInventory(
       "#adjust-message"
     );
 
-  message.textContent = "";
+  message.textContent =
+    "";
 
   const quantity =
     Number(
@@ -2280,13 +4499,16 @@ async function adjustInventory(
 
   const {
     error
-  } = await db
-    .from(
-      "inventory_transactions"
-    )
-    .insert(payload);
+  } =
+    await db
+      .from(
+        "inventory_transactions"
+      )
+      .insert(payload);
 
-  if (error) {
+  if (
+    error
+  ) {
     message.textContent =
       error.message;
 
@@ -2300,6 +4522,10 @@ async function adjustInventory(
   );
 }
 
+/* =====================================================
+   CHEMICAL CARDS
+   ===================================================== */
+
 function renderChemicalCards(
   products
 ) {
@@ -2308,7 +4534,9 @@ function renderChemicalCards(
       "#chemical-list"
     );
 
-  if (!products?.length) {
+  if (
+    !products?.length
+  ) {
     box.innerHTML = `
       <div class="empty">
         No chemicals in inventory.
@@ -2320,160 +4548,179 @@ function renderChemicalCards(
 
   box.innerHTML =
     products
-      .map(product => {
-        const low =
-          product
-            .reorder_level !=
-            null &&
-          Number(
-            product.quantity
-          ) <=
-          Number(
+      .map(
+        product => {
+          const low =
             product
-              .reorder_level
-          );
+              .reorder_level !=
+              null &&
+            Number(
+              product.quantity
+            ) <=
+            Number(
+              product
+                .reorder_level
+            );
 
-        return `
-          <article class="card row">
+          return `
+            <article
+              class="card row"
+            >
 
-            <div>
+              <div>
 
-              <h3>
-                ${esc(
-                  product
-                    .product_name
-                )}
-              </h3>
-
-              <p>
-
-                <span class="tag">
+                <h3>
                   ${esc(
-                    String(
+                    product
+                      .product_name
+                  )}
+                </h3>
+
+                <p>
+
+                  <span class="tag">
+                    ${esc(
+                      formatQuantity(
+                        product
+                          .quantity ??
+                        0
+                      )
+                    )}
+                    ${esc(
+                      product.unit ||
+                      ""
+                    )}
+                  </span>
+
+                  ${
+                    low
+                      ? `
+                        <span
+                          class="tag"
+                        >
+                          LOW STOCK
+                        </span>
+                      `
+                      : ""
+                  }
+
+                </p>
+
+                <p class="meta">
+                  ${esc(
+                    [
                       product
-                        .quantity ??
-                      0
-                    )
+                        .product_type,
+                      product
+                        .manufacturer,
+                      product
+                        .storage_location
+                    ]
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " · "
+                      )
                   )}
-                  ${esc(
-                    product.unit ||
-                    ""
-                  )}
-                </span>
+                </p>
 
                 ${
-                  low
+                  product
+                    .reorder_level !=
+                    null
                     ? `
-                      <span
-                        class="tag"
-                      >
-                        LOW STOCK
-                      </span>
+                      <p class="meta">
+                        Low stock warning:
+                        ${esc(
+                          formatQuantity(
+                            product
+                              .reorder_level
+                          )
+                        )}
+                        ${esc(
+                          product.unit ||
+                          ""
+                        )}
+                      </p>
                     `
                     : ""
                 }
 
-              </p>
+              </div>
 
-              <p class="meta">
-                ${esc(
-                  [
-                    product
-                      .product_type,
+              <button
+                class="delete remove-chemical"
+                data-id="${product.id}"
+                type="button"
+              >
+                Delete
+              </button>
 
-                    product
-                      .manufacturer,
-
-                    product
-                      .storage_location
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                )}
-              </p>
-
-              ${
-                product
-                  .reorder_level !=
-                  null
-                  ? `
-                    <p class="meta">
-                      Low stock warning:
-                      ${esc(
-                        String(
-                          product
-                            .reorder_level
-                        )
-                      )}
-                      ${esc(
-                        product.unit ||
-                        ""
-                      )}
-                    </p>
-                  `
-                  : ""
-              }
-
-            </div>
-
-            <button
-              class="delete remove-chemical"
-              data-id="${product.id}"
-              type="button"
-            >
-              Delete
-            </button>
-
-          </article>
-        `;
-      })
+            </article>
+          `;
+        }
+      )
       .join("");
 
   box
     .querySelectorAll(
       ".remove-chemical"
     )
-    .forEach(button => {
-      button.addEventListener(
-        "click",
-        async () => {
-          if (
-            !confirm(
-              "Remove this product from current inventory? Old application records will be kept."
-            )
-          ) {
-            return;
-          }
+    .forEach(
+      button => {
+        button.addEventListener(
+          "click",
+          async () => {
+            if (
+              !confirm(
+                "Remove this product from current inventory? Old application records will be kept."
+              )
+            ) {
+              return;
+            }
 
-          const {
-            error
-          } = await db
-            .from(
-              "chemical_products"
-            )
-            .update({
-              active: false
-            })
-            .eq(
-              "id",
-              button.dataset.id
+            const {
+              error
+            } =
+              await db
+                .from(
+                  "chemical_products"
+                )
+                .update({
+                  active: false
+                })
+                .eq(
+                  "id",
+                  button
+                    .dataset
+                    .id
+                );
+
+            if (
+              error
+            ) {
+              alert(
+                error.message
+              );
+
+              return;
+            }
+
+            await renderChemicalInventory(
+              document.querySelector(
+                "#page"
+              )
             );
-
-          if (error) {
-            alert(error.message);
-
-            return;
           }
-
-          await renderChemicalInventory(
-            document.querySelector(
-              "#page"
-            )
-          );
-        }
-      );
-    });
+        );
+      }
+    );
 }
+
+/* =====================================================
+   INVENTORY HISTORY
+   ===================================================== */
 
 async function loadInventoryHistory() {
   const box =
@@ -2490,50 +4737,57 @@ async function loadInventoryHistory() {
   const {
     data,
     error
-  } = await db
-    .from(
-      "inventory_transactions"
-    )
-    .select(`
-      id,
-      transaction_type,
-      quantity_change,
-      transaction_date,
-      supplier,
-      reason,
-      notes,
-      created_at,
-
-      chemical_products (
-        product_name,
-        unit
+  } =
+    await db
+      .from(
+        "inventory_transactions"
       )
-    `)
-    .order(
-      "transaction_date",
-      {
-        ascending: false
-      }
-    )
-    .order(
-      "created_at",
-      {
-        ascending: false
-      }
-    )
-    .limit(50);
+      .select(`
+        id,
+        transaction_type,
+        quantity_change,
+        transaction_date,
+        supplier,
+        reason,
+        notes,
+        created_at,
 
-  if (error) {
+        chemical_products (
+          product_name,
+          unit
+        )
+      `)
+      .order(
+        "transaction_date",
+        {
+          ascending: false
+        }
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      )
+      .limit(50);
+
+  if (
+    error
+  ) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(error.message)}
+        ${esc(
+          error.message
+        )}
       </div>
     `;
 
     return;
   }
 
-  if (!data?.length) {
+  if (
+    !data?.length
+  ) {
     box.innerHTML = `
       <div class="empty">
         No inventory activity yet.
@@ -2545,109 +4799,118 @@ async function loadInventoryHistory() {
 
   box.innerHTML =
     data
-      .map(transaction => {
-        const product =
-          transaction
-            .chemical_products;
-
-        const change =
-          Number(
+      .map(
+        transaction => {
+          const product =
             transaction
-              .quantity_change
-          );
+              .chemical_products;
 
-        return `
-          <article class="card">
+          const change =
+            Number(
+              transaction
+                .quantity_change
+            );
 
-            <h3>
-              ${esc(
-                product
-                  ?.product_name ||
-                "Product"
-              )}
-            </h3>
+          return `
+            <article
+              class="card"
+            >
 
-            <p>
-
-              <span class="tag">
-                ${
-                  change > 0
-                    ? "+"
-                    : ""
-                }
-
+              <h3>
                 ${esc(
-                  String(change)
+                  product
+                    ?.product_name ||
+                  "Product"
                 )}
+              </h3>
 
+              <p>
+
+                <span class="tag">
+
+                  ${
+                    change > 0
+                      ? "+"
+                      : ""
+                  }
+
+                  ${esc(
+                    formatQuantity(
+                      change
+                    )
+                  )}
+
+                  ${esc(
+                    product
+                      ?.unit ||
+                    ""
+                  )}
+
+                </span>
+
+              </p>
+
+              <p class="meta">
                 ${esc(
-                  product?.unit ||
-                  ""
-                )}
-              </span>
-
-            </p>
-
-            <p class="meta">
-              ${esc(
-                transaction
-                  .transaction_date
-              )}
-              ·
-              ${esc(
-                humanize(
                   transaction
-                    .transaction_type
-                )
-              )}
-            </p>
+                    .transaction_date
+                )}
+                ·
+                ${esc(
+                  humanize(
+                    transaction
+                      .transaction_type
+                  )
+                )}
+              </p>
 
-            ${
-              transaction
-                .supplier
-                ? `
-                  <p>
-                    Supplier:
-                    ${esc(
-                      transaction
-                        .supplier
-                    )}
-                  </p>
-                `
-                : ""
-            }
+              ${
+                transaction
+                  .supplier
+                  ? `
+                    <p>
+                      Supplier:
+                      ${esc(
+                        transaction
+                          .supplier
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
 
-            ${
-              transaction
-                .reason
-                ? `
-                  <p>
-                    ${esc(
-                      transaction
-                        .reason
-                    )}
-                  </p>
-                `
-                : ""
-            }
+              ${
+                transaction
+                  .reason
+                  ? `
+                    <p>
+                      ${esc(
+                        transaction
+                          .reason
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
 
-            ${
-              transaction
-                .notes
-                ? `
-                  <p class="meta">
-                    ${esc(
-                      transaction
-                        .notes
-                    )}
-                  </p>
-                `
-                : ""
-            }
+              ${
+                transaction
+                  .notes
+                  ? `
+                    <p class="meta">
+                      ${esc(
+                        transaction
+                          .notes
+                      )}
+                    </p>
+                  `
+                  : ""
+              }
 
-          </article>
-        `;
-      })
+            </article>
+          `;
+        }
+      )
       .join("");
 }
 
@@ -2666,7 +4929,7 @@ function productOptions(
           )}
           —
           ${esc(
-            String(
+            formatQuantity(
               product
                 .quantity ??
               0
@@ -2683,7 +4946,7 @@ function productOptions(
 }
 
 /* =====================================================
-   STANDARD PAGES
+   STANDARD PAGE SPECS
    ===================================================== */
 
 const specs = {
@@ -2722,25 +4985,10 @@ const specs = {
         "Priority",
         "select",
         [
-          [
-            "low",
-            "Low"
-          ],
-
-          [
-            "medium",
-            "Medium"
-          ],
-
-          [
-            "high",
-            "High"
-          ],
-
-          [
-            "urgent",
-            "Urgent"
-          ]
+          ["low", "Low"],
+          ["medium", "Medium"],
+          ["high", "High"],
+          ["urgent", "Urgent"]
         ]
       ],
 
@@ -2749,20 +4997,12 @@ const specs = {
         "Status",
         "select",
         [
-          [
-            "open",
-            "Open"
-          ],
-
+          ["open", "Open"],
           [
             "in_progress",
             "In Progress"
           ],
-
-          [
-            "done",
-            "Done"
-          ]
+          ["done", "Done"]
         ]
       ],
 
@@ -2779,59 +5019,60 @@ const specs = {
       ]
     ],
 
-    display: row => `
-      <h3>
-        ${esc(
-          row.title
-        )}
-      </h3>
-
-      <p class="meta">
-        ${esc(
-          [
-            row.course,
-            row.area,
-            row.assigned_to
-          ]
-            .filter(Boolean)
-            .join(" · ")
-        )}
-      </p>
-
-      ${
-        row.description
-          ? `
-            <p>
-              ${esc(
-                row.description
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      <p>
-
-        <span class="tag">
+    display:
+      row => `
+        <h3>
           ${esc(
-            humanize(
-              row.priority ||
-              "medium"
-            )
+            row.title
           )}
-        </span>
+        </h3>
 
-        <span class="tag">
+        <p class="meta">
           ${esc(
-            humanize(
-              row.status ||
-              "open"
-            )
+            [
+              row.course,
+              row.area,
+              row.assigned_to
+            ]
+              .filter(Boolean)
+              .join(" · ")
           )}
-        </span>
+        </p>
 
-      </p>
-    `
+        ${
+          row.description
+            ? `
+              <p>
+                ${esc(
+                  row.description
+                )}
+              </p>
+            `
+            : ""
+        }
+
+        <p>
+
+          <span class="tag">
+            ${esc(
+              humanize(
+                row.priority ||
+                "medium"
+              )
+            )}
+          </span>
+
+          <span class="tag">
+            ${esc(
+              humanize(
+                row.status ||
+                "open"
+              )
+            )}
+          </span>
+
+        </p>
+      `
   },
 
   jobs: {
@@ -2875,25 +5116,10 @@ const specs = {
         "Priority",
         "select",
         [
-          [
-            "low",
-            "Low"
-          ],
-
-          [
-            "medium",
-            "Medium"
-          ],
-
-          [
-            "high",
-            "High"
-          ],
-
-          [
-            "urgent",
-            "Urgent"
-          ]
+          ["low", "Low"],
+          ["medium", "Medium"],
+          ["high", "High"],
+          ["urgent", "Urgent"]
         ]
       ],
 
@@ -2902,20 +5128,12 @@ const specs = {
         "Status",
         "select",
         [
-          [
-            "open",
-            "Open"
-          ],
-
+          ["open", "Open"],
           [
             "in_progress",
             "In Progress"
           ],
-
-          [
-            "done",
-            "Done"
-          ]
+          ["done", "Done"]
         ]
       ],
 
@@ -2932,55 +5150,58 @@ const specs = {
       ]
     ],
 
-    display: row => `
-      <h3>
-        ${esc(
-          row.title
-        )}
-      </h3>
-
-      <p class="meta">
-        ${esc(
-          [
-            row.job_type,
-            row.course,
-            row.area,
-            row.assigned_to
-          ]
-            .filter(Boolean)
-            .join(" · ")
-        )}
-      </p>
-
-      ${
-        row.description
-          ? `
-            <p>
-              ${esc(
-                row.description
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      <p>
-        <span class="tag">
+    display:
+      row => `
+        <h3>
           ${esc(
-            humanize(
-              row.status ||
-              "open"
-            )
+            row.title
           )}
-        </span>
-      </p>
-    `
+        </h3>
+
+        <p class="meta">
+          ${esc(
+            [
+              row.job_type,
+              row.course,
+              row.area,
+              row.assigned_to
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          )}
+        </p>
+
+        ${
+          row.description
+            ? `
+              <p>
+                ${esc(
+                  row.description
+                )}
+              </p>
+            `
+            : ""
+        }
+
+        <p>
+          <span class="tag">
+            ${esc(
+              humanize(
+                row.status ||
+                "open"
+              )
+            )}
+          </span>
+        </p>
+      `
   },
 
   calendar: {
     title: "Calendar",
-    table: "calendar_entries",
-    order: "start_date",
+    table:
+      "calendar_entries",
+    order:
+      "start_date",
 
     fields: [
       [
@@ -2994,35 +5215,24 @@ const specs = {
         "Entry Type",
         "select",
         [
-          [
-            "event",
-            "Event"
-          ],
-
+          ["event", "Event"],
           [
             "staff_day_off",
             "Staff Day Off"
           ],
-
           [
             "maintenance",
             "Maintenance"
           ],
-
           [
             "tournament",
             "Tournament"
           ],
-
           [
             "delivery",
             "Delivery"
           ],
-
-          [
-            "other",
-            "Other"
-          ]
+          ["other", "Other"]
         ]
       ],
 
@@ -3051,216 +5261,72 @@ const specs = {
       ]
     ],
 
-    display: row => `
-      <h3>
-        ${esc(
-          row.title
-        )}
-      </h3>
+    display:
+      row => `
+        <h3>
+          ${esc(
+            row.title
+          )}
+        </h3>
 
-      <p class="meta">
-        ${esc(
-          row.start_date
-        )}
+        <p class="meta">
+          ${esc(
+            row.start_date
+          )}
+
+          ${
+            row.end_date
+              ? `
+                –
+                ${esc(
+                  row.end_date
+                )}
+              `
+              : ""
+          }
+
+          ·
+
+          ${esc(
+            humanize(
+              row.entry_type ||
+              "event"
+            )
+          )}
+        </p>
 
         ${
-          row.end_date
+          row.staff_member
             ? `
-              –
-              ${esc(
-                row.end_date
-              )}
+              <p>
+                Staff:
+                ${esc(
+                  row.staff_member
+                )}
+              </p>
             `
             : ""
         }
 
-        ·
-
-        ${esc(
-          humanize(
-            row.entry_type ||
-            "event"
-          )
-        )}
-      </p>
-
-      ${
-        row.staff_member
-          ? `
-            <p>
-              Staff:
-              ${esc(
-                row.staff_member
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        row.description
-          ? `
-            <p>
-              ${esc(
-                row.description
-              )}
-            </p>
-          `
-          : ""
-      }
-    `
-  },
-
-  greens: {
-    title: "Greens",
-    table: "greens_logs",
-    order: "reading_date",
-
-    fields: [
-      [
-        "reading_date",
-        "Date",
-        "date"
-      ],
-
-      [
-        "course",
-        "Course",
-        "text"
-      ],
-
-      [
-        "green_name",
-        "Green",
-        "text"
-      ],
-
-      [
-        "moisture",
-        "Moisture",
-        "number"
-      ],
-
-      [
-        "firmness",
-        "Firmness",
-        "number"
-      ],
-
-      [
-        "green_speed",
-        "Green Speed",
-        "number"
-      ],
-
-      [
-        "mowing_height_mm",
-        "Mowing Height mm",
-        "number"
-      ],
-
-      [
-        "soil_temperature_c",
-        "Soil Temperature °C",
-        "number"
-      ],
-
-      [
-        "air_temperature_c",
-        "Air Temperature °C",
-        "number"
-      ],
-
-      [
-        "notes",
-        "Notes",
-        "textarea"
-      ]
-    ],
-
-    display: row => `
-      <h3>
-        ${esc(
-          row.green_name
-        )}
-      </h3>
-
-      <p class="meta">
-        ${esc(
-          row.reading_date
-        )}
-
         ${
-          row.course
+          row.description
             ? `
-              ·
-              ${esc(
-                row.course
-              )}
+              <p>
+                ${esc(
+                  row.description
+                )}
+              </p>
             `
             : ""
         }
-      </p>
-
-      <p>
-        Moisture:
-        ${esc(
-          String(
-            row.moisture ??
-            "—"
-          )
-        )}
-      </p>
-
-      <p>
-        Firmness:
-        ${esc(
-          String(
-            row.firmness ??
-            "—"
-          )
-        )}
-      </p>
-
-      <p>
-        Green Speed:
-        ${esc(
-          String(
-            row.green_speed ??
-            "—"
-          )
-        )}
-      </p>
-
-      <p>
-        Mowing Height:
-        ${esc(
-          String(
-            row.mowing_height_mm ??
-            "—"
-          )
-        )}
-        mm
-      </p>
-
-      ${
-        row.notes
-          ? `
-            <p>
-              ${esc(
-                row.notes
-              )}
-            </p>
-          `
-          : ""
-      }
-    `
+      `
   },
 
   equipment: {
     title: "Equipment",
     table: "equipment",
-    order: "equipment_name",
+    order:
+      "equipment_name",
 
     fields: [
       [
@@ -3302,16 +5368,11 @@ const specs = {
             "operational",
             "Operational"
           ],
-
           [
             "needs_repair",
             "Needs Repair"
           ],
-
-          [
-            "down",
-            "Down"
-          ]
+          ["down", "Down"]
         ]
       ],
 
@@ -3334,85 +5395,88 @@ const specs = {
       ]
     ],
 
-    display: row => `
-      <h3>
-        ${esc(
-          row.equipment_name
-        )}
-      </h3>
-
-      <p class="meta">
-        ${esc(
-          [
-            row.manufacturer,
-            row.model,
-
-            row.fleet_number
-              ? `Fleet #${row.fleet_number}`
-              : null
-          ]
-            .filter(Boolean)
-            .join(" · ")
-        )}
-      </p>
-
-      <p>
-        <span class="tag">
+    display:
+      row => `
+        <h3>
           ${esc(
-            humanize(
-              row.status ||
-              "operational"
-            )
+            row.equipment_name
           )}
-        </span>
-      </p>
+        </h3>
 
-      ${
-        row.hours != null
-          ? `
-            <p>
-              Hours:
-              ${esc(
-                String(
-                  row.hours
-                )
-              )}
-            </p>
-          `
-          : ""
-      }
+        <p class="meta">
+          ${esc(
+            [
+              row.manufacturer,
+              row.model,
 
-      ${
-        row.next_service_date
-          ? `
-            <p>
-              Next Service:
-              ${esc(
-                row.next_service_date
-              )}
-            </p>
-          `
-          : ""
-      }
+              row.fleet_number
+                ? `Fleet #${row.fleet_number}`
+                : null
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          )}
+        </p>
 
-      ${
-        row.notes
-          ? `
-            <p>
-              ${esc(
-                row.notes
-              )}
-            </p>
-          `
-          : ""
-      }
-    `
+        <p>
+          <span class="tag">
+            ${esc(
+              humanize(
+                row.status ||
+                "operational"
+              )
+            )}
+          </span>
+        </p>
+
+        ${
+          row.hours != null
+            ? `
+              <p>
+                Hours:
+                ${esc(
+                  formatQuantity(
+                    row.hours
+                  )
+                )}
+              </p>
+            `
+            : ""
+        }
+
+        ${
+          row.next_service_date
+            ? `
+              <p>
+                Next Service:
+                ${esc(
+                  row.next_service_date
+                )}
+              </p>
+            `
+            : ""
+        }
+
+        ${
+          row.notes
+            ? `
+              <p>
+                ${esc(
+                  row.notes
+                )}
+              </p>
+            `
+            : ""
+        }
+      `
   },
 
   notes: {
     title: "Notes",
-    table: "daily_notes",
-    order: "note_date",
+    table:
+      "daily_notes",
+    order:
+      "note_date",
 
     fields: [
       [
@@ -3434,33 +5498,34 @@ const specs = {
       ]
     ],
 
-    display: row => `
-      <h3>
-        ${esc(
-          row.note_date
-        )}
+    display:
+      row => `
+        <h3>
+          ${esc(
+            row.note_date
+          )}
 
-        ${
-          row.category
-            ? `
-              <span
-                class="tag"
-              >
-                ${esc(
-                  row.category
-                )}
-              </span>
-            `
-            : ""
-        }
-      </h3>
+          ${
+            row.category
+              ? `
+                <span
+                  class="tag"
+                >
+                  ${esc(
+                    row.category
+                  )}
+                </span>
+              `
+              : ""
+          }
+        </h3>
 
-      <p>
-        ${esc(
-          row.note_text
-        )}
-      </p>
-    `
+        <p>
+          ${esc(
+            row.note_text
+          )}
+        </p>
+      `
   }
 };
 
@@ -3472,7 +5537,8 @@ async function renderCrud(
   page,
   spec
 ) {
-  let editingId = null;
+  let editingId =
+    null;
 
   page.innerHTML = `
     <div class="heading">
@@ -3484,6 +5550,7 @@ async function renderCrud(
       <button
         id="toggle-form"
         class="primary"
+        type="button"
       >
         + Add
       </button>
@@ -3497,25 +5564,33 @@ async function renderCrud(
 
       <div class="form-grid">
 
-        ${spec.fields
-          .filter(
-            field =>
-              field[2] !==
-              "textarea"
-          )
-          .map(fieldHtml)
-          .join("")}
+        ${
+          spec.fields
+            .filter(
+              field =>
+                field[2] !==
+                "textarea"
+            )
+            .map(
+              fieldHtml
+            )
+            .join("")
+        }
 
       </div>
 
-      ${spec.fields
-        .filter(
-          field =>
-            field[2] ===
-            "textarea"
-        )
-        .map(fieldHtml)
-        .join("")}
+      ${
+        spec.fields
+          .filter(
+            field =>
+              field[2] ===
+              "textarea"
+          )
+          .map(
+            fieldHtml
+          )
+          .join("")
+      }
 
       <div
         style="
@@ -3592,28 +5667,32 @@ async function renderCrud(
     saveButton.textContent =
       "Save";
 
-    cancelButton.classList.add(
-      "hidden"
-    );
+    cancelButton
+      .classList
+      .add(
+        "hidden"
+      );
 
     toggleButton.textContent =
       "+ Add";
 
-    message.textContent = "";
+    message.textContent =
+      "";
   }
 
   function beginEdit(row) {
-    editingId = row.id;
+    editingId =
+      row.id;
 
     for (
-      const [
-        key
-      ] of spec.fields
+      const [key]
+      of spec.fields
     ) {
       const element =
-        document.getElementById(
-          key
-        );
+        document
+          .getElementById(
+            key
+          );
 
       if (!element) {
         continue;
@@ -3635,9 +5714,11 @@ async function renderCrud(
     saveButton.textContent =
       "Save Changes";
 
-    cancelButton.classList.remove(
-      "hidden"
-    );
+    cancelButton
+      .classList
+      .remove(
+        "hidden"
+      );
 
     message.textContent =
       "Editing existing record";
@@ -3648,44 +5729,52 @@ async function renderCrud(
     });
   }
 
-  toggleButton.addEventListener(
-    "click",
-    () => {
-      if (editingId) {
-        resetForm();
+  toggleButton
+    .addEventListener(
+      "click",
+      () => {
+        if (
+          editingId
+        ) {
+          resetForm();
+        }
+
+        form.classList.toggle(
+          "hidden"
+        );
       }
+    );
 
-      form.classList.toggle(
-        "hidden"
-      );
-    }
-  );
-
-  cancelButton.addEventListener(
-    "click",
-    resetForm
-  );
+  cancelButton
+    .addEventListener(
+      "click",
+      resetForm
+    );
 
   form.addEventListener(
     "submit",
     async event => {
       event.preventDefault();
 
-      message.textContent = "";
+      message.textContent =
+        "";
 
-      const payload = {};
+      const payload =
+        {};
 
       for (
         const [
           key,
           ,
           type
-        ] of spec.fields
+        ]
+        of spec.fields
       ) {
         const element =
-          document.getElementById(
-            key
-          );
+          document
+            .getElementById(
+              key
+            );
 
         let value =
           element.value.trim();
@@ -3722,6 +5811,7 @@ async function renderCrud(
                 "id",
                 editingId
               )
+
           : await db
               .from(
                 spec.table
@@ -3772,19 +5862,22 @@ async function loadRecords(
   const {
     data,
     error
-  } = await db
-    .from(
-      spec.table
-    )
-    .select("*")
-    .order(
-      spec.order,
-      {
-        ascending: false
-      }
-    );
+  } =
+    await db
+      .from(
+        spec.table
+      )
+      .select("*")
+      .order(
+        spec.order,
+        {
+          ascending: false
+        }
+      );
 
-  if (error) {
+  if (
+    error
+  ) {
     box.innerHTML = `
       <div class="empty">
         ${esc(
@@ -3796,7 +5889,9 @@ async function loadRecords(
     return;
   }
 
-  if (!data?.length) {
+  if (
+    !data?.length
+  ) {
     box.innerHTML = `
       <div class="empty">
         No records yet.
@@ -3855,76 +5950,85 @@ async function loadRecords(
     .querySelectorAll(
       ".edit-record"
     )
-    .forEach(button => {
-      button.addEventListener(
-        "click",
-        () => {
-          const row =
-            data.find(
-              item =>
-                String(
-                  item.id
-                ) ===
-                String(
-                  button
-                    .dataset
-                    .id
-                )
-            );
+    .forEach(
+      button => {
+        button.addEventListener(
+          "click",
+          () => {
+            const row =
+              data.find(
+                item =>
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    button
+                      .dataset
+                      .id
+                  )
+              );
 
-          if (
-            row &&
-            onEdit
-          ) {
-            onEdit(row);
+            if (
+              row &&
+              onEdit
+            ) {
+              onEdit(row);
+            }
           }
-        }
-      );
-    });
+        );
+      }
+    );
 
   box
     .querySelectorAll(
       ".delete-record"
     )
-    .forEach(button => {
-      button.addEventListener(
-        "click",
-        async () => {
-          if (
-            !confirm(
-              "Delete this record?"
-            )
-          ) {
-            return;
-          }
+    .forEach(
+      button => {
+        button.addEventListener(
+          "click",
+          async () => {
+            if (
+              !confirm(
+                "Delete this record?"
+              )
+            ) {
+              return;
+            }
 
-          const {
-            error
-          } = await db
-            .from(
-              spec.table
-            )
-            .delete()
-            .eq(
-              "id",
-              button.dataset.id
+            const {
+              error
+            } =
+              await db
+                .from(
+                  spec.table
+                )
+                .delete()
+                .eq(
+                  "id",
+                  button
+                    .dataset
+                    .id
+                );
+
+            if (
+              error
+            ) {
+              alert(
+                error.message
+              );
+
+              return;
+            }
+
+            await loadRecords(
+              spec,
+              onEdit
             );
-
-          if (error) {
-            alert(
-              error.message
-            );
-
-            return;
           }
-
-          await loadRecords(
-            spec,
-            onEdit
-          );
-        }
-      );
-    });
+        );
+      }
+    );
 }
 
 /* =====================================================
@@ -3950,17 +6054,24 @@ async function renderStaff(
   const {
     data,
     error
-  } = await db
-    .from("profiles")
-    .select("*")
-    .order("full_name");
+  } =
+    await db
+      .from(
+        "profiles"
+      )
+      .select("*")
+      .order(
+        "full_name"
+      );
 
   const box =
     document.querySelector(
       "#staff-list"
     );
 
-  if (error) {
+  if (
+    error
+  ) {
     box.innerHTML = `
       <div class="empty">
         ${esc(
@@ -3972,7 +6083,9 @@ async function renderStaff(
     return;
   }
 
-  if (!data?.length) {
+  if (
+    !data?.length
+  ) {
     box.innerHTML = `
       <div class="empty">
         No staff found.
@@ -4075,20 +6188,22 @@ function fieldHtml(
           id="${key}"
         >
 
-          ${options
-            .map(
-              ([
-                optionValue,
-                optionText
-              ]) => `
-                <option
-                  value="${optionValue}"
-                >
-                  ${optionText}
-                </option>
-              `
-            )
-            .join("")}
+          ${
+            options
+              .map(
+                ([
+                  optionValue,
+                  optionText
+                ]) => `
+                  <option
+                    value="${optionValue}"
+                  >
+                    ${optionText}
+                  </option>
+                `
+              )
+              .join("")
+          }
 
         </select>
 
@@ -4104,6 +6219,7 @@ function fieldHtml(
       <input
         id="${key}"
         type="${type}"
+
         ${
           type ===
           "number"
@@ -4120,7 +6236,9 @@ function cards(
   rows,
   renderer
 ) {
-  if (!rows?.length) {
+  if (
+    !rows?.length
+  ) {
     return `
       <div class="empty">
         Nothing to show.
@@ -4131,19 +6249,21 @@ function cards(
   return `
     <div class="list">
 
-      ${rows
-        .map(
-          row => `
-            <article
-              class="card"
-            >
-              ${renderer(
-                row
-              )}
-            </article>
-          `
-        )
-        .join("")}
+      ${
+        rows
+          .map(
+            row => `
+              <article
+                class="card"
+              >
+                ${renderer(
+                  row
+                )}
+              </article>
+            `
+          )
+          .join("")
+      }
 
     </div>
   `;
@@ -4155,16 +6275,20 @@ function nullable(id) {
       `#${id}`
     );
 
-  if (!element) {
+  if (
+    !element
+  ) {
     return null;
   }
 
   const value =
     element.value.trim();
 
-  return value === ""
-    ? null
-    : value;
+  return (
+    value === ""
+      ? null
+      : value
+  );
 }
 
 function nullableNumber(
@@ -4175,7 +6299,9 @@ function nullableNumber(
       `#${id}`
     );
 
-  if (!element) {
+  if (
+    !element
+  ) {
     return null;
   }
 
@@ -4199,6 +6325,104 @@ function today() {
   );
 }
 
+function currentTimeValue() {
+  const now =
+    new Date();
+
+  const hours =
+    String(
+      now.getHours()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const minutes =
+    String(
+      now.getMinutes()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  return `${hours}:${minutes}`;
+}
+
+function timeToMinutes(
+  time
+) {
+  if (
+    !time
+  ) {
+    return 0;
+  }
+
+  const parts =
+    time
+      .slice(
+        0,
+        5
+      )
+      .split(":");
+
+  const hours =
+    Number(
+      parts[0]
+    ) || 0;
+
+  const minutes =
+    Number(
+      parts[1]
+    ) || 0;
+
+  return (
+    hours * 60 +
+    minutes
+  );
+}
+
+function formatTimeForDisplay(
+  time
+) {
+  if (
+    !time
+  ) {
+    return "";
+  }
+
+  const [
+    hours,
+    minutes
+  ] =
+    time
+      .slice(
+        0,
+        5
+      )
+      .split(":")
+      .map(Number);
+
+  const date =
+    new Date(
+      2000,
+      0,
+      1,
+      hours,
+      minutes
+    );
+
+  return date
+    .toLocaleTimeString(
+      "en-CA",
+      {
+        hour:
+          "numeric",
+        minute:
+          "2-digit"
+      }
+    );
+}
+
 function formatDate(date) {
   const year =
     date.getFullYear();
@@ -4206,27 +6430,91 @@ function formatDate(date) {
   const month =
     String(
       date.getMonth() + 1
-    )
-      .padStart(
-        2,
-        "0"
-      );
+    ).padStart(
+      2,
+      "0"
+    );
 
   const day =
     String(
       date.getDate()
-    )
-      .padStart(
-        2,
-        "0"
-      );
+    ).padStart(
+      2,
+      "0"
+    );
 
   return `${year}-${month}-${day}`;
 }
 
+function formatDisplayDate(
+  dateString
+) {
+  if (
+    !dateString
+  ) {
+    return "";
+  }
+
+  const [
+    year,
+    month,
+    day
+  ] =
+    dateString
+      .split("-")
+      .map(Number);
+
+  const date =
+    new Date(
+      year,
+      month - 1,
+      day
+    );
+
+  return date
+    .toLocaleDateString(
+      "en-CA",
+      {
+        month:
+          "short",
+        day:
+          "numeric",
+        year:
+          "numeric"
+      }
+    );
+}
+
+function formatQuantity(
+  number
+) {
+  const parsed =
+    Number(
+      number
+    );
+
+  if (
+    !Number.isFinite(
+      parsed
+    )
+  ) {
+    return "0";
+  }
+
+  return parsed
+    .toLocaleString(
+      "en-CA",
+      {
+        maximumFractionDigits:
+          3
+      }
+    );
+}
+
 function humanize(value) {
   return String(
-    value || ""
+    value ||
+    ""
   )
     .replaceAll(
       "_",
@@ -4235,8 +6523,7 @@ function humanize(value) {
     .replace(
       /\b\w/g,
       letter =>
-        letter
-          .toUpperCase()
+        letter.toUpperCase()
     );
 }
 
@@ -4247,7 +6534,8 @@ function esc(value) {
     );
 
   div.textContent =
-    value ?? "";
+    value ??
+    "";
 
   return div.innerHTML;
 }
