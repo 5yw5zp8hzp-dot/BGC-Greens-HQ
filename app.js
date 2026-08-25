@@ -6,15 +6,23 @@ const db = supabase.createClient(
 );
 
 /* =====================================================
-   BRAMPTON GOLF CLUB WEATHER LOCATION
+   CONFIG
    ===================================================== */
 
 const BRAMPTON_GOLF_LAT = 43.66502;
 const BRAMPTON_GOLF_LON = -79.71436;
 
+const PROFILE_EDITOR_ROLES = [
+  "admin",
+  "superintendent",
+  "assistant",
+  "mechanic"
+];
+
 const state = {
   page: "home",
-  calendarMonth: null
+  calendarMonth: null,
+  currentProfile: null
 };
 
 const navItems = [
@@ -28,6 +36,10 @@ const navItems = [
   ["staff", "Staff"],
   ["notes", "Notes"]
 ];
+
+/* =====================================================
+   STARTUP / AUTH
+   ===================================================== */
 
 document.addEventListener(
   "DOMContentLoaded",
@@ -45,9 +57,7 @@ async function init() {
     );
 
   document
-    .querySelector(
-      "#sign-out-button"
-    )
+    .querySelector("#sign-out-button")
     .addEventListener(
       "click",
       () => db.auth.signOut()
@@ -56,13 +66,13 @@ async function init() {
   const { data } =
     await db.auth.getSession();
 
-  showForSession(
+  await showForSession(
     data.session
   );
 
   db.auth.onAuthStateChange(
-    (_event, session) => {
-      showForSession(
+    async (_event, session) => {
+      await showForSession(
         session
       );
     }
@@ -74,17 +84,13 @@ async function login(event) {
 
   const email =
     document
-      .querySelector(
-        "#login-email"
-      )
+      .querySelector("#login-email")
       .value
       .trim();
 
   const password =
     document
-      .querySelector(
-        "#login-password"
-      )
+      .querySelector("#login-password")
       .value;
 
   const message =
@@ -95,10 +101,11 @@ async function login(event) {
   message.textContent = "";
 
   const { error } =
-    await db.auth.signInWithPassword({
-      email,
-      password
-    });
+    await db.auth
+      .signInWithPassword({
+        email,
+        password
+      });
 
   if (error) {
     message.textContent =
@@ -106,28 +113,84 @@ async function login(event) {
   }
 }
 
-function showForSession(session) {
+async function showForSession(
+  session
+) {
   document
-    .querySelector(
-      "#login-screen"
-    )
+    .querySelector("#login-screen")
     .classList.toggle(
       "hidden",
       !!session
     );
 
   document
-    .querySelector(
-      "#app-shell"
-    )
+    .querySelector("#app-shell")
     .classList.toggle(
       "hidden",
       !session
     );
 
-  if (session) {
-    renderPage();
+  if (!session) {
+    state.currentProfile =
+      null;
+
+    return;
   }
+
+  await loadCurrentProfile(
+    session.user.id
+  );
+
+  await renderPage();
+}
+
+async function loadCurrentProfile(
+  userId
+) {
+  const {
+    data,
+    error
+  } =
+    await db
+      .from("profiles")
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        position,
+        role,
+        active
+      `)
+      .eq(
+        "id",
+        userId
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Could not load current profile:",
+      error
+    );
+
+    state.currentProfile =
+      null;
+
+    return;
+  }
+
+  state.currentProfile =
+    data || null;
+}
+
+function canCurrentUserEditProfiles() {
+  return (
+    state.currentProfile?.active !== false &&
+    PROFILE_EDITOR_ROLES.includes(
+      state.currentProfile?.role
+    )
+  );
 }
 
 /* =====================================================
@@ -196,9 +259,12 @@ async function renderPage() {
     );
 
   if (
-    state.page === "home"
+    state.page ===
+    "home"
   ) {
-    return renderHome(page);
+    return renderHome(
+      page
+    );
   }
 
   if (
@@ -220,9 +286,12 @@ async function renderPage() {
   }
 
   if (
-    state.page === "staff"
+    state.page ===
+    "staff"
   ) {
-    return renderStaff(page);
+    return renderStaff(
+      page
+    );
   }
 
   const spec =
@@ -240,8 +309,12 @@ async function renderPage() {
    HOME
    ===================================================== */
 
-async function renderHome(page) {
-  if (!state.calendarMonth) {
+async function renderHome(
+  page
+) {
+  if (
+    !state.calendarMonth
+  ) {
     state.calendarMonth =
       new Date();
 
@@ -303,7 +376,8 @@ async function renderHome(page) {
         .order(
           "note_date",
           {
-            ascending: false
+            ascending:
+              false
           }
         )
         .limit(3),
@@ -343,27 +417,31 @@ async function renderHome(page) {
     (
       chemicals.data ||
       []
-    ).filter(product => {
-      if (
-        product.reorder_level ==
-        null
-      ) {
-        return false;
-      }
+    ).filter(
+      product => {
+        if (
+          product.reorder_level ==
+          null
+        ) {
+          return false;
+        }
 
-      return (
-        Number(
-          product.quantity
-        ) <=
-        Number(
-          product.reorder_level
-        )
-      );
-    });
+        return (
+          Number(
+            product.quantity
+          ) <=
+          Number(
+            product.reorder_level
+          )
+        );
+      }
+    );
 
   page.innerHTML = `
     <div class="heading">
-      <h2>Home</h2>
+      <h2>
+        Home
+      </h2>
     </div>
 
     <div class="grid">
@@ -402,16 +480,20 @@ async function renderHome(page) {
 
     <div
       class="card"
-      style="margin-top:24px;"
+      style="
+        margin-top:24px;
+      "
     >
 
       <div
         style="
           display:flex;
-          justify-content:space-between;
+          justify-content:
+            space-between;
           align-items:center;
           gap:12px;
-          margin-bottom:18px;
+          margin-bottom:
+            18px;
         "
       >
 
@@ -427,7 +509,8 @@ async function renderHome(page) {
           style="
             margin:0;
             text-align:center;
-            color:var(--navy);
+            color:
+              var(--navy);
           "
         >
           ${
@@ -435,8 +518,10 @@ async function renderHome(page) {
               .toLocaleDateString(
                 "en-CA",
                 {
-                  month: "long",
-                  year: "numeric"
+                  month:
+                    "long",
+                  year:
+                    "numeric"
                 }
               )
           }
@@ -455,14 +540,17 @@ async function renderHome(page) {
       ${
         buildMonthCalendar(
           monthStart,
-          calendar.data || []
+          calendar.data ||
+            []
         )
       }
 
     </div>
 
     <h3
-      style="margin-top:28px;"
+      style="
+        margin-top:28px;
+      "
     >
       Recent Notes
     </h3>
@@ -472,11 +560,19 @@ async function renderHome(page) {
         notes.data,
         row => `
           <h3>
-            ${esc(row.note_date)}
+            ${
+              esc(
+                row.note_date
+              )
+            }
           </h3>
 
           <p>
-            ${esc(row.note_text)}
+            ${
+              esc(
+                row.note_text
+              )
+            }
           </p>
         `
       )
@@ -495,11 +591,14 @@ async function renderHome(page) {
             state.calendarMonth
               .getFullYear(),
             state.calendarMonth
-              .getMonth() - 1,
+              .getMonth() -
+              1,
             1
           );
 
-        renderHome(page);
+        renderHome(
+          page
+        );
       }
     );
 
@@ -515,11 +614,14 @@ async function renderHome(page) {
             state.calendarMonth
               .getFullYear(),
             state.calendarMonth
-              .getMonth() + 1,
+              .getMonth() +
+              1,
             1
           );
 
-        renderHome(page);
+        renderHome(
+          page
+        );
       }
     );
 }
@@ -529,10 +631,12 @@ function buildMonthCalendar(
   events
 ) {
   const year =
-    monthStart.getFullYear();
+    monthStart
+      .getFullYear();
 
   const month =
-    monthStart.getMonth();
+    monthStart
+      .getMonth();
 
   const firstDay =
     new Date(
@@ -591,9 +695,12 @@ function buildMonthCalendar(
         style="
           text-align:center;
           font-weight:800;
-          padding:8px 2px;
-          color:var(--navy);
-          font-size:.82rem;
+          padding:
+            8px 2px;
+          color:
+            var(--navy);
+          font-size:
+            .82rem;
         "
       >
         ${dayName}
@@ -608,10 +715,12 @@ function buildMonthCalendar(
   ) {
     let dayNumber;
     let cellDate;
-    let otherMonth = false;
+    let otherMonth =
+      false;
 
     if (
-      cell < firstDay
+      cell <
+      firstDay
     ) {
       dayNumber =
         previousMonthDays -
@@ -626,12 +735,12 @@ function buildMonthCalendar(
           dayNumber
         );
 
-      otherMonth = true;
-
+      otherMonth =
+        true;
     } else if (
       cell >=
       firstDay +
-      daysInMonth
+        daysInMonth
     ) {
       dayNumber =
         cell -
@@ -646,8 +755,8 @@ function buildMonthCalendar(
           dayNumber
         );
 
-      otherMonth = true;
-
+      otherMonth =
+        true;
     } else {
       dayNumber =
         cell -
@@ -668,55 +777,72 @@ function buildMonthCalendar(
       );
 
     const isToday =
-      cellDate.getFullYear() ===
-        todayDate.getFullYear() &&
-      cellDate.getMonth() ===
-        todayDate.getMonth() &&
-      cellDate.getDate() ===
-        todayDate.getDate();
+      cellDate
+        .getFullYear() ===
+        todayDate
+          .getFullYear() &&
+      cellDate
+        .getMonth() ===
+        todayDate
+          .getMonth() &&
+      cellDate
+        .getDate() ===
+        todayDate
+          .getDate();
 
     const dayEvents =
-      events.filter(event => {
-        const start =
-          event.start_date;
+      events.filter(
+        event => {
+          const start =
+            event.start_date;
 
-        const end =
-          event.end_date ||
-          event.start_date;
+          const end =
+            event.end_date ||
+            event.start_date;
 
-        return (
-          dateString >= start &&
-          dateString <= end
-        );
-      });
+          return (
+            dateString >=
+              start &&
+            dateString <=
+              end
+          );
+        }
+      );
 
     html += `
       <div
         style="
-          min-height:105px;
+          min-height:
+            105px;
           min-width:0;
-          border:1px solid
+          border:
+            1px solid
             var(--border);
-          border-radius:8px;
+          border-radius:
+            8px;
           padding:6px;
-          background:${
-            otherMonth
-              ? "#f7f7f7"
-              : "#fff"
-          };
-          opacity:${
-            otherMonth
-              ? ".55"
-              : "1"
-          };
+          background:
+            ${
+              otherMonth
+                ? "#f7f7f7"
+                : "#fff"
+            };
+          opacity:
+            ${
+              otherMonth
+                ? ".55"
+                : "1"
+            };
         "
       >
 
         <div
           style="
             display:flex;
-            justify-content:flex-end;
-            margin-bottom:5px;
+            justify-content:
+              flex-end;
+            margin-bottom:
+              5px;
           "
         >
 
@@ -726,12 +852,15 @@ function buildMonthCalendar(
               place-items:center;
               width:28px;
               height:28px;
-              border-radius:50%;
+              border-radius:
+                50%;
               font-weight:800;
+
               ${
                 isToday
                   ? `
-                    background:#006747;
+                    background:
+                      #006747;
                     color:#fff;
                   `
                   : ""
@@ -749,18 +878,31 @@ function buildMonthCalendar(
               event => `
                 <div
                   style="
-                    font-size:.72rem;
-                    font-weight:700;
-                    padding:4px 5px;
-                    margin-bottom:4px;
-                    border-radius:6px;
-                    background:#e7f2ed;
-                    color:#004B2B;
-                    overflow:hidden;
-                    word-break:break-word;
+                    font-size:
+                      .72rem;
+                    font-weight:
+                      700;
+                    padding:
+                      4px 5px;
+                    margin-bottom:
+                      4px;
+                    border-radius:
+                      6px;
+                    background:
+                      #e7f2ed;
+                    color:
+                      #004B2B;
+                    overflow:
+                      hidden;
+                    word-break:
+                      break-word;
                   "
                 >
-                  ${esc(event.title)}
+                  ${
+                    esc(
+                      event.title
+                    )
+                  }
                 </div>
               `
             )
@@ -771,7 +913,9 @@ function buildMonthCalendar(
     `;
   }
 
-  html += `</div>`;
+  html += `
+    </div>
+  `;
 
   return html;
 }
@@ -785,7 +929,8 @@ async function renderApplications(
 ) {
   const {
     data: products,
-    error: productError
+    error:
+      productError
   } =
     await db
       .from(
@@ -805,7 +950,9 @@ async function renderApplications(
         "product_name"
       );
 
-  if (productError) {
+  if (
+    productError
+  ) {
     page.innerHTML = `
       <div class="heading">
         <h2>
@@ -814,9 +961,11 @@ async function renderApplications(
       </div>
 
       <div class="empty">
-        ${esc(
-          productError.message
-        )}
+        ${
+          esc(
+            productError.message
+          )
+        }
       </div>
     `;
 
@@ -842,7 +991,9 @@ async function renderApplications(
 
     <div
       class="card"
-      style="margin-bottom:20px;"
+      style="
+        margin-bottom:20px;
+      "
     >
 
       <h3>
@@ -851,7 +1002,7 @@ async function renderApplications(
 
       <p class="meta">
         Select a month to view
-        chemical usage totals and
+        product usage totals and
         all applications from that
         month.
       </p>
@@ -860,13 +1011,16 @@ async function renderApplications(
         style="
           display:flex;
           gap:10px;
-          align-items:flex-end;
+          align-items:
+            flex-end;
           flex-wrap:wrap;
         "
       >
 
         <label
-          style="margin:0;"
+          style="
+            margin:0;
+          "
         >
           Month
 
@@ -874,7 +1028,11 @@ async function renderApplications(
             id="application-summary-month"
             type="month"
             value="${
-              today().slice(0, 7)
+              today()
+                .slice(
+                  0,
+                  7
+                )
             }"
           >
         </label>
@@ -904,7 +1062,9 @@ async function renderApplications(
         New Application
       </h3>
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Date
@@ -924,7 +1084,9 @@ async function renderApplications(
             id="application_time"
             type="time"
             required
-            value="${currentTimeValue()}"
+            value="${
+              currentTimeValue()
+            }"
           >
         </label>
 
@@ -1011,7 +1173,9 @@ async function renderApplications(
       <div
         id="weather-status"
         class="meta"
-        style="margin-bottom:18px;"
+        style="
+          margin-bottom:18px;
+        "
       ></div>
 
       <h3>
@@ -1052,7 +1216,9 @@ async function renderApplications(
     </form>
 
     <h3
-      style="margin-top:24px;"
+      style="
+        margin-top:24px;
+      "
     >
       Application History
     </h3>
@@ -1063,32 +1229,35 @@ async function renderApplications(
     ></section>
   `;
 
-  const toggleButton =
-    document.querySelector(
+  document
+    .querySelector(
       "#toggle-application-form"
-    );
+    )
+    .addEventListener(
+      "click",
+      async () => {
+        const form =
+          document
+            .querySelector(
+              "#application-form"
+            );
 
-  toggleButton.addEventListener(
-    "click",
-    async () => {
-      const form =
-        document.querySelector(
-          "#application-form"
-        );
+        form
+          .classList
+          .toggle(
+            "hidden"
+          );
 
-      form.classList.toggle(
-        "hidden"
-      );
-
-      if (
-        !form.classList.contains(
-          "hidden"
-        )
-      ) {
-        await autofillApplicationWeather();
+        if (
+          !form.classList
+            .contains(
+              "hidden"
+            )
+        ) {
+          await autofillApplicationWeather();
+        }
       }
-    }
-  );
+    );
 
   document
     .querySelector(
@@ -1110,23 +1279,19 @@ async function renderApplications(
       }
     );
 
-  const applicationDateInput =
-    document.querySelector(
+  document
+    .querySelector(
       "#application_date"
-    );
-
-  const applicationTimeInput =
-    document.querySelector(
-      "#application_time"
-    );
-
-  applicationDateInput
+    )
     .addEventListener(
       "change",
       autofillApplicationWeather
     );
 
-  applicationTimeInput
+  document
+    .querySelector(
+      "#application_time"
+    )
     .addEventListener(
       "change",
       autofillApplicationWeather
@@ -1139,17 +1304,22 @@ async function renderApplications(
 
   function addProductRow() {
     const row =
-      document.createElement(
-        "div"
-      );
+      document
+        .createElement(
+          "div"
+        );
 
-    row.className = "card";
+    row.className =
+      "card";
 
-    row.style.marginBottom =
+    row.style
+      .marginBottom =
       "12px";
 
     row.innerHTML = `
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Product
@@ -1159,7 +1329,9 @@ async function renderApplications(
             required
           >
 
-            <option value="">
+            <option
+              value=""
+            >
               Choose product…
             </option>
 
@@ -1168,27 +1340,41 @@ async function renderApplications(
                 .map(
                   product => `
                     <option
-                      value="${product.id}"
-                      data-stock="${
-                        product.quantity ?? 0
+                      value="${
+                        product.id
                       }"
-                      data-unit="${esc(
-                        product.unit || ""
-                      )}"
-                    >
-                      ${esc(
-                        product.product_name
-                      )}
-                      —
-                      ${esc(
-                        String(
-                          product.quantity ??
-                          0
+                      data-stock="${
+                        product.quantity ??
+                        0
+                      }"
+                      data-unit="${
+                        esc(
+                          product.unit ||
+                          ""
                         )
-                      )}
-                      ${esc(
-                        product.unit || ""
-                      )}
+                      }"
+                    >
+                      ${
+                        esc(
+                          product
+                            .product_name
+                        )
+                      }
+                      —
+                      ${
+                        esc(
+                          String(
+                            product.quantity ??
+                            0
+                          )
+                        )
+                      }
+                      ${
+                        esc(
+                          product.unit ||
+                          ""
+                        )
+                      }
                       available
                     </option>
                   `
@@ -1241,9 +1427,12 @@ async function renderApplications(
       "change",
       () => {
         const option =
-          select.selectedOptions[0];
+          select
+            .selectedOptions[0];
 
-        if (!option?.value) {
+        if (
+          !option?.value
+        ) {
           help.textContent =
             "Select a product.";
 
@@ -1251,9 +1440,11 @@ async function renderApplications(
         }
 
         help.textContent =
-          `${option.dataset.stock} ` +
-          `${option.dataset.unit} ` +
-          `currently in inventory`;
+          `${
+            option.dataset.stock
+          } ${
+            option.dataset.unit
+          } currently in inventory`;
       }
     );
 
@@ -1267,7 +1458,8 @@ async function renderApplications(
           if (
             productRows
               .children
-              .length <= 1
+              .length <=
+            1
           ) {
             return;
           }
@@ -1277,7 +1469,9 @@ async function renderApplications(
       );
 
     productRows
-      .appendChild(row);
+      .appendChild(
+        row
+      );
   }
 
   addProductRow();
@@ -1309,7 +1503,7 @@ async function renderApplications(
 }
 
 /* =====================================================
-   APPLICATION WEATHER AUTO-FILL
+   APPLICATION WEATHER
    ===================================================== */
 
 async function autofillApplicationWeather() {
@@ -1386,7 +1580,8 @@ async function autofillApplicationWeather() {
     let apiUrl;
 
     if (
-      date < todayString
+      date <
+      todayString
     ) {
       apiUrl =
         "https://archive-api.open-meteo.com/v1/archive" +
@@ -1412,9 +1607,13 @@ async function autofillApplicationWeather() {
     }
 
     const response =
-      await fetch(apiUrl);
+      await fetch(
+        apiUrl
+      );
 
-    if (!response.ok) {
+    if (
+      !response.ok
+    ) {
       throw new Error(
         "Weather service unavailable."
       );
@@ -1439,7 +1638,9 @@ async function autofillApplicationWeather() {
         time
       );
 
-    let closestIndex = -1;
+    let closestIndex =
+      -1;
+
     let closestDifference =
       Infinity;
 
@@ -1480,7 +1681,8 @@ async function autofillApplicationWeather() {
       );
 
     if (
-      closestIndex === -1
+      closestIndex ===
+      -1
     ) {
       throw new Error(
         "Could not match weather to the selected application time."
@@ -1488,71 +1690,68 @@ async function autofillApplicationWeather() {
     }
 
     const temperature =
-      weather.hourly
+      weather
+        .hourly
         .temperature_2m[
           closestIndex
         ];
 
     const wind =
-      weather.hourly
+      weather
+        .hourly
         .wind_speed_10m[
           closestIndex
         ];
 
     const matchedTime =
-      weather.hourly.time[
-        closestIndex
-      ].slice(
-        11,
-        16
-      );
+      weather
+        .hourly
+        .time[
+          closestIndex
+        ]
+        .slice(
+          11,
+          16
+        );
 
     if (
-      temperature != null &&
-      Number.isFinite(
-        Number(
-          temperature
-        )
-      )
+      temperature !=
+      null
     ) {
       temperatureInput.value =
         Number(
           temperature
-        ).toFixed(1);
+        ).toFixed(
+          1
+        );
 
       temperatureStatus.textContent =
         `Auto-filled using ${formatTimeForDisplay(
           matchedTime
         )} weather`;
-    } else {
-      temperatureStatus.textContent =
-        "Temperature unavailable.";
     }
 
     if (
-      wind != null &&
-      Number.isFinite(
-        Number(wind)
-      )
+      wind !=
+      null
     ) {
       windInput.value =
         Number(
           wind
-        ).toFixed(1);
+        ).toFixed(
+          1
+        );
 
       windStatus.textContent =
         `Auto-filled using ${formatTimeForDisplay(
           matchedTime
         )} weather`;
-    } else {
-      windStatus.textContent =
-        "Wind unavailable.";
     }
 
     overallStatus.textContent =
       `Weather loaded for Brampton Golf Club near ${formatTimeForDisplay(
         matchedTime
-      )}. You can manually change the values before saving.`;
+      )}. Values can still be changed manually.`;
 
   } catch (error) {
     console.error(
@@ -1567,7 +1766,7 @@ async function autofillApplicationWeather() {
       "Enter manually.";
 
     overallStatus.textContent =
-      "Weather could not be loaded. Temperature and wind can still be entered manually.";
+      "Weather could not be loaded. Enter temperature and wind manually.";
   }
 }
 
@@ -1612,14 +1811,18 @@ async function loadApplicationMonthSummary(
       "0"
     )}-01`;
 
-  let nextYear = year;
+  let nextYear =
+    year;
+
   let nextMonth =
     month + 1;
 
   if (
     nextMonth === 13
   ) {
-    nextMonth = 1;
+    nextMonth =
+      1;
+
     nextYear++;
   }
 
@@ -1674,16 +1877,21 @@ async function loadApplicationMonthSummary(
       .order(
         "application_date",
         {
-          ascending: true
+          ascending:
+            true
         }
       );
 
-  if (error) {
+  if (
+    error
+  ) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(
-          error.message
-        )}
+        ${
+          esc(
+            error.message
+          )
+        }
       </div>
     `;
 
@@ -1695,13 +1903,16 @@ async function loadApplicationMonthSummary(
       year,
       month - 1,
       1
-    ).toLocaleDateString(
-      "en-CA",
-      {
-        month: "long",
-        year: "numeric"
-      }
-    );
+    )
+      .toLocaleDateString(
+        "en-CA",
+        {
+          month:
+            "long",
+          year:
+            "numeric"
+        }
+      );
 
   if (
     !data?.length
@@ -1709,11 +1920,17 @@ async function loadApplicationMonthSummary(
     box.innerHTML = `
       <div
         class="card"
-        style="margin-bottom:20px;"
+        style="
+          margin-bottom:20px;
+        "
       >
 
         <h2>
-          ${esc(monthTitle)}
+          ${
+            esc(
+              monthTitle
+            )
+          }
           Application Summary
         </h2>
 
@@ -1728,9 +1945,11 @@ async function loadApplicationMonthSummary(
     return;
   }
 
-  const productTotals = {};
+  const productTotals =
+    {};
 
-  let totalProductEntries = 0;
+  let totalProductEntries =
+    0;
 
   data.forEach(
     application => {
@@ -1753,10 +1972,12 @@ async function loadApplicationMonthSummary(
             "Unknown Product";
 
           const unit =
-            chemical?.unit ||
+            chemical
+              ?.unit ||
             "";
 
           const key =
+            item.product_id ||
             `${name}|||${unit}`;
 
           if (
@@ -1769,7 +1990,8 @@ async function loadApplicationMonthSummary(
             ] = {
               name,
               unit,
-              quantity: 0
+              quantity:
+                0
             };
           }
 
@@ -1799,13 +2021,22 @@ async function loadApplicationMonthSummary(
   box.innerHTML = `
     <div
       class="card"
-      style="margin-bottom:24px;"
+      style="
+        margin-bottom:24px;
+      "
     >
 
       <h2
-        style="color:var(--navy);"
+        style="
+          color:
+            var(--navy);
+        "
       >
-        ${esc(monthTitle)}
+        ${
+          esc(
+            monthTitle
+          )
+        }
         Application Summary
       </h2>
 
@@ -1842,7 +2073,9 @@ async function loadApplicationMonthSummary(
           </div>
 
           <h3>
-            ${totalProductEntries}
+            ${
+              totalProductEntries
+            }
           </h3>
 
         </div>
@@ -1850,7 +2083,9 @@ async function loadApplicationMonthSummary(
       </div>
 
       <h3
-        style="margin-top:26px;"
+        style="
+          margin-top:26px;
+        "
       >
         Product Totals
       </h3>
@@ -1868,34 +2103,40 @@ async function loadApplicationMonthSummary(
                   <div>
 
                     <h3>
-                      ${esc(
-                        product.name
-                      )}
+                      ${
+                        esc(
+                          product.name
+                        )
+                      }
                     </h3>
 
                     <p class="meta">
                       Total used during
-                      ${esc(
-                        monthTitle
-                      )}
+                      ${
+                        esc(
+                          monthTitle
+                        )
+                      }
                     </p>
 
                   </div>
 
-                  <div>
-
-                    <span class="tag">
-                      ${esc(
+                  <span
+                    class="tag"
+                  >
+                    ${
+                      esc(
                         formatQuantity(
                           product.quantity
                         )
-                      )}
-                      ${esc(
+                      )
+                    }
+                    ${
+                      esc(
                         product.unit
-                      )}
-                    </span>
-
-                  </div>
+                      )
+                    }
+                  </span>
 
                 </article>
               `
@@ -1906,7 +2147,9 @@ async function loadApplicationMonthSummary(
       </div>
 
       <h3
-        style="margin-top:28px;"
+        style="
+          margin-top:28px;
+        "
       >
         Applications
       </h3>
@@ -1928,10 +2171,12 @@ async function loadApplicationMonthSummary(
                   >
 
                     <h3>
-                      ${formatDisplayDate(
-                        application
-                          .application_date
-                      )}
+                      ${
+                        formatDisplayDate(
+                          application
+                            .application_date
+                        )
+                      }
 
                       ${
                         application
@@ -1953,19 +2198,21 @@ async function loadApplicationMonthSummary(
                       application.holes
                         ? `
                           <p class="meta">
-                            ${esc(
-                              [
-                                application.course,
-                                application.area,
-                                application.holes
-                              ]
-                                .filter(
-                                  Boolean
-                                )
-                                .join(
-                                  " · "
-                                )
-                            )}
+                            ${
+                              esc(
+                                [
+                                  application.course,
+                                  application.area,
+                                  application.holes
+                                ]
+                                  .filter(
+                                    Boolean
+                                  )
+                                  .join(
+                                    " · "
+                                  )
+                              )
+                            }
                           </p>
                         `
                         : ""
@@ -1975,38 +2222,37 @@ async function loadApplicationMonthSummary(
                       ${
                         products
                           .map(
-                            item => {
-                              const chemical =
-                                item
-                                  .chemical_products;
-
-                              return `
-                                <span
-                                  class="tag"
-                                >
-                                  ${esc(
-                                    chemical
+                            item => `
+                              <span
+                                class="tag"
+                              >
+                                ${
+                                  esc(
+                                    item
+                                      .chemical_products
                                       ?.product_name ||
                                     "Product"
-                                  )}
-                                  —
-                                  ${esc(
+                                  )
+                                }
+                                —
+                                ${
+                                  esc(
                                     formatQuantity(
-                                      Number(
-                                        item
-                                          .quantity_used ||
-                                        0
-                                      )
+                                      item
+                                        .quantity_used
                                     )
-                                  )}
-                                  ${esc(
-                                    chemical
+                                  )
+                                }
+                                ${
+                                  esc(
+                                    item
+                                      .chemical_products
                                       ?.unit ||
                                     ""
-                                  )}
-                                </span>
-                              `;
-                            }
+                                  )
+                                }
+                              </span>
+                            `
                           )
                           .join(" ")
                       }
@@ -2020,10 +2266,36 @@ async function loadApplicationMonthSummary(
                             <strong>
                               Applicator:
                             </strong>
-                            ${esc(
-                              application
-                                .applicator_name
-                            )}
+
+                            ${
+                              esc(
+                                application
+                                  .applicator_name
+                              )
+                            }
+                          </p>
+                        `
+                        : ""
+                    }
+
+                    ${
+                      application
+                        .tank_count !=
+                        null
+                        ? `
+                          <p>
+                            <strong>
+                              Tanks:
+                            </strong>
+
+                            ${
+                              esc(
+                                formatQuantity(
+                                  application
+                                    .tank_count
+                                )
+                              )
+                            }
                           </p>
                         `
                         : ""
@@ -2036,12 +2308,14 @@ async function loadApplicationMonthSummary(
                         ? `
                           <p class="meta">
                             Temperature:
-                            ${esc(
-                              formatQuantity(
-                                application
-                                  .temperature_c
+                            ${
+                              esc(
+                                formatQuantity(
+                                  application
+                                    .temperature_c
+                                )
                               )
-                            )}°C
+                            }°C
                           </p>
                         `
                         : ""
@@ -2054,12 +2328,14 @@ async function loadApplicationMonthSummary(
                         ? `
                           <p class="meta">
                             Wind:
-                            ${esc(
-                              formatQuantity(
-                                application
-                                  .wind_kmh
+                            ${
+                              esc(
+                                formatQuantity(
+                                  application
+                                    .wind_kmh
+                                )
                               )
-                            )}
+                            }
                             km/h
                           </p>
                         `
@@ -2070,9 +2346,11 @@ async function loadApplicationMonthSummary(
                       application.notes
                         ? `
                           <p>
-                            ${esc(
-                              application.notes
-                            )}
+                            ${
+                              esc(
+                                application.notes
+                              )
+                            }
                           </p>
                         `
                         : ""
@@ -2106,7 +2384,8 @@ async function saveApplication(
       "#application-message"
     );
 
-  message.textContent = "";
+  message.textContent =
+    "";
 
   const rows = [
     ...document
@@ -2152,7 +2431,8 @@ async function saveApplication(
       !Number.isFinite(
         quantity
       ) ||
-      quantity <= 0
+      quantity <=
+        0
     ) {
       message.textContent =
         "Each product needs a quantity greater than zero.";
@@ -2188,9 +2468,14 @@ async function saveApplication(
         quantity
     ) {
       message.textContent =
-        `Not enough ${product.product_name}. ` +
-        `Available: ${product.quantity} ` +
-        `${product.unit || ""}.`;
+        `Not enough ${
+          product.product_name
+        }. Available: ${
+          product.quantity
+        } ${
+          product.unit ||
+          ""
+        }.`;
 
       return;
     }
@@ -2262,18 +2547,23 @@ async function saveApplication(
   };
 
   const {
-    data: application,
+    data:
+      application,
     error
   } =
     await db
       .from(
         "applications"
       )
-      .insert(payload)
+      .insert(
+        payload
+      )
       .select()
       .single();
 
-  if (error) {
+  if (
+    error
+  ) {
     message.textContent =
       error.message;
 
@@ -2297,10 +2587,12 @@ async function saveApplication(
             application.id,
 
           product_id:
-            product.product_id,
+            product
+              .product_id,
 
           quantity_used:
-            product.quantity_used
+            product
+              .quantity_used
         });
 
     if (
@@ -2419,22 +2711,28 @@ async function loadApplications() {
       .order(
         "application_date",
         {
-          ascending: false
+          ascending:
+            false
         }
       )
       .order(
         "created_at",
         {
-          ascending: false
+          ascending:
+            false
         }
       );
 
-  if (error) {
+  if (
+    error
+  ) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(
-          error.message
-        )}
+        ${
+          esc(
+            error.message
+          )
+        }
       </div>
     `;
 
@@ -2470,10 +2768,12 @@ async function loadApplications() {
               <div>
 
                 <h3>
-                  ${formatDisplayDate(
-                    application
-                      .application_date
-                  )}
+                  ${
+                    formatDisplayDate(
+                      application
+                        .application_date
+                    )
+                  }
 
                   ${
                     application
@@ -2490,54 +2790,58 @@ async function loadApplications() {
                 </h3>
 
                 <p class="meta">
-                  ${esc(
-                    [
-                      application.course,
-                      application.area,
-                      application.holes
-                    ]
-                      .filter(
-                        Boolean
-                      )
-                      .join(
-                        " · "
-                      )
-                  )}
+                  ${
+                    esc(
+                      [
+                        application.course,
+                        application.area,
+                        application.holes
+                      ]
+                        .filter(
+                          Boolean
+                        )
+                        .join(
+                          " · "
+                        )
+                    )
+                  }
                 </p>
 
                 <p>
                   ${
                     products
                       .map(
-                        item => {
-                          const chemical =
-                            item
-                              .chemical_products;
-
-                          return `
-                            <span
-                              class="tag"
-                            >
-                              ${esc(
-                                chemical
+                        item => `
+                          <span
+                            class="tag"
+                          >
+                            ${
+                              esc(
+                                item
+                                  .chemical_products
                                   ?.product_name ||
                                 "Product"
-                              )}
-                              —
-                              ${esc(
+                              )
+                            }
+                            —
+                            ${
+                              esc(
                                 formatQuantity(
                                   item
                                     .quantity_used
                                 )
-                              )}
-                              ${esc(
-                                chemical
+                              )
+                            }
+                            ${
+                              esc(
+                                item
+                                  .chemical_products
                                   ?.unit ||
                                 ""
-                              )}
-                            </span>
-                          `;
-                        }
+                              )
+                            }
+                          </span>
+                        `
                       )
                       .join(" ")
                   }
@@ -2549,10 +2853,12 @@ async function loadApplications() {
                     ? `
                       <p>
                         Applicator:
-                        ${esc(
-                          application
-                            .applicator_name
-                        )}
+                        ${
+                          esc(
+                            application
+                              .applicator_name
+                          )
+                        }
                       </p>
                     `
                     : ""
@@ -2565,12 +2871,14 @@ async function loadApplications() {
                     ? `
                       <p>
                         Tanks:
-                        ${esc(
-                          formatQuantity(
-                            application
-                              .tank_count
+                        ${
+                          esc(
+                            formatQuantity(
+                              application
+                                .tank_count
+                            )
                           )
-                        )}
+                        }
                       </p>
                     `
                     : ""
@@ -2583,12 +2891,14 @@ async function loadApplications() {
                     ? `
                       <p class="meta">
                         Temperature:
-                        ${esc(
-                          formatQuantity(
-                            application
-                              .temperature_c
+                        ${
+                          esc(
+                            formatQuantity(
+                              application
+                                .temperature_c
+                            )
                           )
-                        )}°C
+                        }°C
                       </p>
                     `
                     : ""
@@ -2601,12 +2911,14 @@ async function loadApplications() {
                     ? `
                       <p class="meta">
                         Wind:
-                        ${esc(
-                          formatQuantity(
-                            application
-                              .wind_kmh
+                        ${
+                          esc(
+                            formatQuantity(
+                              application
+                                .wind_kmh
+                            )
                           )
-                        )}
+                        }
                         km/h
                       </p>
                     `
@@ -2617,9 +2929,11 @@ async function loadApplications() {
                   application.notes
                     ? `
                       <p>
-                        ${esc(
-                          application.notes
-                        )}
+                        ${
+                          esc(
+                            application.notes
+                          )
+                        }
                       </p>
                     `
                     : ""
@@ -2629,7 +2943,9 @@ async function loadApplications() {
 
               <button
                 class="delete delete-application"
-                data-id="${application.id}"
+                data-id="${
+                  application.id
+                }"
                 type="button"
               >
                 Delete
@@ -2651,7 +2967,9 @@ async function loadApplications() {
           "click",
           async () => {
             const appId =
-              button.dataset.id;
+              button
+                .dataset
+                .id;
 
             if (
               !confirm(
@@ -2726,7 +3044,8 @@ async function renderChemicalInventory(
   page
 ) {
   const {
-    data: products,
+    data:
+      products,
     error
   } =
     await db
@@ -2742,7 +3061,9 @@ async function renderChemicalInventory(
         "product_name"
       );
 
-  if (error) {
+  if (
+    error
+  ) {
     page.innerHTML = `
       <div class="heading">
         <h2>
@@ -2751,9 +3072,11 @@ async function renderChemicalInventory(
       </div>
 
       <div class="empty">
-        ${esc(
-          error.message
-        )}
+        ${
+          esc(
+            error.message
+          )
+        }
       </div>
     `;
 
@@ -2812,7 +3135,9 @@ async function renderChemicalInventory(
 
     </div>
 
-    ${addChemicalForm()}
+    ${
+      addChemicalForm()
+    }
 
     ${
       receiveInventoryForm(
@@ -2826,7 +3151,9 @@ async function renderChemicalInventory(
       )
     }
 
-    ${inventoryReportForm()}
+    ${
+      inventoryReportForm()
+    }
 
     <section
       id="chemical-list"
@@ -2834,7 +3161,9 @@ async function renderChemicalInventory(
     ></section>
 
     <h3
-      style="margin-top:28px;"
+      style="
+        margin-top:28px;
+      "
     >
       Recent Inventory Activity
     </h3>
@@ -2858,7 +3187,8 @@ async function renderChemicalInventory(
           .querySelector(
             "#add-product-form"
           )
-          .classList.remove(
+          .classList
+          .remove(
             "hidden"
           );
       }
@@ -2877,7 +3207,8 @@ async function renderChemicalInventory(
           .querySelector(
             "#receive-stock-form"
           )
-          .classList.remove(
+          .classList
+          .remove(
             "hidden"
           );
       }
@@ -2896,7 +3227,8 @@ async function renderChemicalInventory(
           .querySelector(
             "#adjust-stock-form"
           )
-          .classList.remove(
+          .classList
+          .remove(
             "hidden"
           );
       }
@@ -2915,7 +3247,8 @@ async function renderChemicalInventory(
           .querySelector(
             "#inventory-report-form"
           )
-          .classList.remove(
+          .classList
+          .remove(
             "hidden"
           );
       }
@@ -3003,7 +3336,9 @@ function inventoryReportForm() {
         the month-end inventory PDF.
       </p>
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Report Month
@@ -3013,10 +3348,11 @@ function inventoryReportForm() {
             type="month"
             required
             value="${
-              today().slice(
-                0,
-                7
-              )
+              today()
+                .slice(
+                  0,
+                  7
+                )
             }"
           >
         </label>
@@ -3071,9 +3407,11 @@ async function generateInventoryPdf(
   message.textContent =
     "Building report…";
 
-  button.disabled = true;
+  button.disabled =
+    true;
 
-  let previewWindow = null;
+  let previewWindow =
+    null;
 
   try {
     previewWindow =
@@ -3105,9 +3443,12 @@ async function generateInventoryPdf(
       month + 1;
 
     if (
-      nextMonth === 13
+      nextMonth ===
+      13
     ) {
-      nextMonth = 1;
+      nextMonth =
+        1;
+
       nextYear++;
     }
 
@@ -3131,9 +3472,12 @@ async function generateInventoryPdf(
         .toLocaleDateString(
           "en-CA",
           {
-            month: "long",
-            day: "numeric",
-            year: "numeric"
+            month:
+              "long",
+            day:
+              "numeric",
+            year:
+              "numeric"
           }
         );
 
@@ -3142,8 +3486,10 @@ async function generateInventoryPdf(
         .toLocaleDateString(
           "en-CA",
           {
-            month: "long",
-            year: "numeric"
+            month:
+              "long",
+            year:
+              "numeric"
           }
         );
 
@@ -3185,7 +3531,8 @@ async function generateInventoryPdf(
           .order(
             "transaction_date",
             {
-              ascending: true
+              ascending:
+                true
             }
           )
       ]);
@@ -3210,7 +3557,8 @@ async function generateInventoryPdf(
       transactionResult.data ||
       [];
 
-    const reportRows = [];
+    const reportRows =
+      [];
 
     products.forEach(
       product => {
@@ -3221,11 +3569,20 @@ async function generateInventoryPdf(
               product.id
           );
 
-        let opening = 0;
-        let received = 0;
-        let applied = 0;
-        let adjustments = 0;
-        let ending = 0;
+        let opening =
+          0;
+
+        let received =
+          0;
+
+        let applied =
+          0;
+
+        let adjustments =
+          0;
+
+        let ending =
+          0;
 
         productTransactions.forEach(
           transaction => {
@@ -3240,13 +3597,15 @@ async function generateInventoryPdf(
               transaction
                 .transaction_date;
 
-            ending += amount;
+            ending +=
+              amount;
 
             if (
               date <
               startDate
             ) {
-              opening += amount;
+              opening +=
+                amount;
 
               return;
             }
@@ -3256,7 +3615,8 @@ async function generateInventoryPdf(
                 .transaction_type ===
               "delivery"
             ) {
-              received += amount;
+              received +=
+                amount;
 
               return;
             }
@@ -3291,9 +3651,13 @@ async function generateInventoryPdf(
           );
 
         const shouldInclude =
-          Math.abs(opening) >
+          Math.abs(
+            opening
+          ) >
             0.000001 ||
-          Math.abs(ending) >
+          Math.abs(
+            ending
+          ) >
             0.000001 ||
           hadMonthActivity;
 
@@ -3312,7 +3676,8 @@ async function generateInventoryPdf(
             "other",
 
           unit:
-            product.unit || "",
+            product.unit ||
+            "",
 
           opening,
           received,
@@ -3349,12 +3714,17 @@ async function generateInventoryPdf(
       new jsPDF({
         orientation:
           "landscape",
-        unit: "pt",
-        format: "letter"
+
+        unit:
+          "pt",
+
+        format:
+          "letter"
       });
 
     const pageWidth =
-      doc.internal.pageSize
+      doc.internal
+        .pageSize
         .getWidth();
 
     doc.setFont(
@@ -3362,25 +3732,33 @@ async function generateInventoryPdf(
       "bold"
     );
 
-    doc.setFontSize(18);
+    doc.setFontSize(
+      18
+    );
 
     doc.text(
       "BRAMPTON GOLF CLUB",
-      pageWidth / 2,
+      pageWidth /
+        2,
       40,
       {
-        align: "center"
+        align:
+          "center"
       }
     );
 
-    doc.setFontSize(14);
+    doc.setFontSize(
+      14
+    );
 
     doc.text(
       "Chemical Inventory — Month End Report",
-      pageWidth / 2,
+      pageWidth /
+        2,
       62,
       {
-        align: "center"
+        align:
+          "center"
       }
     );
 
@@ -3389,18 +3767,23 @@ async function generateInventoryPdf(
       "normal"
     );
 
-    doc.setFontSize(10);
+    doc.setFontSize(
+      10
+    );
 
     doc.text(
       `Inventory as of ${monthEndText}`,
-      pageWidth / 2,
+      pageWidth /
+        2,
       80,
       {
-        align: "center"
+        align:
+          "center"
       }
     );
 
-    let currentY = 105;
+    let currentY =
+      105;
 
     const typeOrder = [
       "fungicide",
@@ -3473,7 +3856,8 @@ async function generateInventoryPdf(
               (
                 item.product_type ||
                 "other"
-              ) === type
+              ) ===
+              type
           )
           .sort(
             (a, b) =>
@@ -3491,13 +3875,15 @@ async function generateInventoryPdf(
 
       if (
         currentY >
-        doc.internal.pageSize
+        doc.internal
+          .pageSize
           .getHeight() -
           100
       ) {
         doc.addPage();
 
-        currentY = 45;
+        currentY =
+          45;
       }
 
       doc.setFont(
@@ -3505,24 +3891,33 @@ async function generateInventoryPdf(
         "bold"
       );
 
-      doc.setFontSize(11);
+      doc.setFontSize(
+        11
+      );
 
       doc.text(
-        typeLabels[type] ||
-          humanize(type)
-            .toUpperCase(),
+        typeLabels[
+          type
+        ] ||
+          humanize(
+            type
+          ).toUpperCase(),
         40,
         currentY
       );
 
-      currentY += 8;
+      currentY +=
+        8;
 
       doc.autoTable({
-        startY: currentY,
+        startY:
+          currentY,
 
         margin: {
-          left: 40,
-          right: 40
+          left:
+            40,
+          right:
+            40
         },
 
         head: [[
@@ -3574,8 +3969,11 @@ async function generateInventoryPdf(
           ),
 
         styles: {
-          fontSize: 9,
-          cellPadding: 5
+          fontSize:
+            9,
+
+          cellPadding:
+            5
         },
 
         headStyles: {
@@ -3584,12 +3982,15 @@ async function generateInventoryPdf(
             103,
             71
           ],
+
           textColor: [
             255,
             255,
             255
           ],
-          fontStyle: "bold"
+
+          fontStyle:
+            "bold"
         },
 
         alternateRowStyles: {
@@ -3602,37 +4003,46 @@ async function generateInventoryPdf(
 
         columnStyles: {
           0: {
-            cellWidth: 210
+            cellWidth:
+              210
           }
         },
 
-        didDrawPage: () => {
-          const height =
-            doc.internal.pageSize
-              .getHeight();
+        didDrawPage:
+          () => {
+            const height =
+              doc.internal
+                .pageSize
+                .getHeight();
 
-          doc.setFontSize(8);
+            doc.setFontSize(
+              8
+            );
 
-          doc.setFont(
-            "helvetica",
-            "normal"
-          );
+            doc.setFont(
+              "helvetica",
+              "normal"
+            );
 
-          doc.text(
-            `Brampton Golf Club · ${monthName}`,
-            40,
-            height - 20
-          );
+            doc.text(
+              `Brampton Golf Club · ${monthName}`,
+              40,
+              height -
+                20
+            );
 
-          doc.text(
-            `Page ${doc.internal.getNumberOfPages()}`,
-            pageWidth - 40,
-            height - 20,
-            {
-              align: "right"
-            }
-          );
-        }
+            doc.text(
+              `Page ${doc.internal.getNumberOfPages()}`,
+              pageWidth -
+                40,
+              height -
+                20,
+              {
+                align:
+                  "right"
+              }
+            );
+          }
       });
 
       currentY =
@@ -3724,7 +4134,8 @@ function formatPdfSignedQuantity(
     );
 
   const sign =
-    number > 0
+    number >
+    0
       ? "+"
       : "";
 
@@ -3760,7 +4171,8 @@ async function ensurePdfLibraries() {
   }
 
   const testDoc =
-    new window.jspdf.jsPDF();
+    new window.jspdf
+      .jsPDF();
 
   if (
     typeof testDoc.autoTable !==
@@ -3773,7 +4185,8 @@ async function ensurePdfLibraries() {
   }
 
   const secondTestDoc =
-    new window.jspdf.jsPDF();
+    new window.jspdf
+      .jsPDF();
 
   if (
     typeof secondTestDoc.autoTable !==
@@ -3795,54 +4208,66 @@ function loadExternalScript(
       reject
     ) => {
       const existing =
-        document.getElementById(
-          id
-        );
+        document
+          .getElementById(
+            id
+          );
+
+      if (
+        existing &&
+        existing.dataset.loaded ===
+          "true"
+      ) {
+        resolve();
+
+        return;
+      }
 
       if (
         existing
       ) {
-        if (
-          existing.dataset.loaded ===
-          "true"
-        ) {
-          resolve();
+        existing
+          .addEventListener(
+            "load",
+            resolve,
+            {
+              once:
+                true
+            }
+          );
 
-          return;
-        }
-
-        existing.addEventListener(
-          "load",
-          resolve,
-          {
-            once: true
-          }
-        );
-
-        existing.addEventListener(
-          "error",
-          () =>
-            reject(
-              new Error(
-                "Could not load PDF library."
-              )
-            ),
-          {
-            once: true
-          }
-        );
+        existing
+          .addEventListener(
+            "error",
+            () =>
+              reject(
+                new Error(
+                  "Could not load PDF library."
+                )
+              ),
+            {
+              once:
+                true
+            }
+          );
 
         return;
       }
 
       const script =
-        document.createElement(
-          "script"
-        );
+        document
+          .createElement(
+            "script"
+          );
 
-      script.id = id;
-      script.src = src;
-      script.async = true;
+      script.id =
+        id;
+
+      script.src =
+        src;
+
+      script.async =
+        true;
 
       script.onload =
         () => {
@@ -3861,15 +4286,16 @@ function loadExternalScript(
           );
         };
 
-      document.head.appendChild(
-        script
-      );
+      document.head
+        .appendChild(
+          script
+        );
     }
   );
 }
 
 /* =====================================================
-   ADD CHEMICAL
+   CHEMICAL FORMS
    ===================================================== */
 
 function addChemicalForm() {
@@ -3883,7 +4309,9 @@ function addChemicalForm() {
         Add Chemical Product
       </h3>
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Product Name
@@ -4080,7 +4508,9 @@ async function saveNewChemical(
       .from(
         "chemical_products"
       )
-      .insert(payload);
+      .insert(
+        payload
+      );
 
   if (
     error
@@ -4098,10 +4528,6 @@ async function saveNewChemical(
   );
 }
 
-/* =====================================================
-   RECEIVE INVENTORY
-   ===================================================== */
-
 function receiveInventoryForm(
   products
 ) {
@@ -4115,7 +4541,9 @@ function receiveInventoryForm(
         Receive Inventory
       </h3>
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Product
@@ -4220,7 +4648,8 @@ async function receiveInventory(
     !Number.isFinite(
       quantity
     ) ||
-    quantity <= 0
+    quantity <=
+      0
   ) {
     message.textContent =
       "Quantity must be greater than zero.";
@@ -4270,7 +4699,9 @@ async function receiveInventory(
       .from(
         "inventory_transactions"
       )
-      .insert(payload);
+      .insert(
+        payload
+      );
 
   if (
     error
@@ -4287,10 +4718,6 @@ async function receiveInventory(
     )
   );
 }
-
-/* =====================================================
-   ADJUST INVENTORY
-   ===================================================== */
 
 function adjustInventoryForm(
   products
@@ -4312,7 +4739,9 @@ function adjustInventoryForm(
         inventory.
       </p>
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         <label>
           Product
@@ -4455,7 +4884,8 @@ async function adjustInventory(
     !Number.isFinite(
       quantity
     ) ||
-    quantity === 0
+    quantity ===
+      0
   ) {
     message.textContent =
       "Adjustment cannot be zero.";
@@ -4504,7 +4934,9 @@ async function adjustInventory(
       .from(
         "inventory_transactions"
       )
-      .insert(payload);
+      .insert(
+        payload
+      );
 
   if (
     error
@@ -4558,8 +4990,7 @@ function renderChemicalCards(
               product.quantity
             ) <=
             Number(
-              product
-                .reorder_level
+              product.reorder_level
             );
 
           return `
@@ -4570,26 +5001,33 @@ function renderChemicalCards(
               <div>
 
                 <h3>
-                  ${esc(
-                    product
-                      .product_name
-                  )}
+                  ${
+                    esc(
+                      product
+                        .product_name
+                    )
+                  }
                 </h3>
 
                 <p>
 
-                  <span class="tag">
-                    ${esc(
-                      formatQuantity(
-                        product
-                          .quantity ??
-                        0
+                  <span
+                    class="tag"
+                  >
+                    ${
+                      esc(
+                        formatQuantity(
+                          product.quantity ??
+                          0
+                        )
                       )
-                    )}
-                    ${esc(
-                      product.unit ||
-                      ""
-                    )}
+                    }
+                    ${
+                      esc(
+                        product.unit ||
+                        ""
+                      )
+                    }
                   </span>
 
                   ${
@@ -4607,22 +5045,21 @@ function renderChemicalCards(
                 </p>
 
                 <p class="meta">
-                  ${esc(
-                    [
-                      product
-                        .product_type,
-                      product
-                        .manufacturer,
-                      product
-                        .storage_location
-                    ]
-                      .filter(
-                        Boolean
-                      )
-                      .join(
-                        " · "
-                      )
-                  )}
+                  ${
+                    esc(
+                      [
+                        product.product_type,
+                        product.manufacturer,
+                        product.storage_location
+                      ]
+                        .filter(
+                          Boolean
+                        )
+                        .join(
+                          " · "
+                        )
+                    )
+                  }
                 </p>
 
                 ${
@@ -4632,16 +5069,20 @@ function renderChemicalCards(
                     ? `
                       <p class="meta">
                         Low stock warning:
-                        ${esc(
-                          formatQuantity(
-                            product
-                              .reorder_level
+                        ${
+                          esc(
+                            formatQuantity(
+                              product
+                                .reorder_level
+                            )
                           )
-                        )}
-                        ${esc(
-                          product.unit ||
-                          ""
-                        )}
+                        }
+                        ${
+                          esc(
+                            product.unit ||
+                            ""
+                          )
+                        }
                       </p>
                     `
                     : ""
@@ -4651,7 +5092,9 @@ function renderChemicalCards(
 
               <button
                 class="delete remove-chemical"
-                data-id="${product.id}"
+                data-id="${
+                  product.id
+                }"
                 type="button"
               >
                 Delete
@@ -4688,7 +5131,8 @@ function renderChemicalCards(
                   "chemical_products"
                 )
                 .update({
-                  active: false
+                  active:
+                    false
                 })
                 .eq(
                   "id",
@@ -4708,9 +5152,10 @@ function renderChemicalCards(
             }
 
             await renderChemicalInventory(
-              document.querySelector(
-                "#page"
-              )
+              document
+                .querySelector(
+                  "#page"
+                )
             );
           }
         );
@@ -4760,25 +5205,31 @@ async function loadInventoryHistory() {
       .order(
         "transaction_date",
         {
-          ascending: false
+          ascending:
+            false
         }
       )
       .order(
         "created_at",
         {
-          ascending: false
+          ascending:
+            false
         }
       )
-      .limit(50);
+      .limit(
+        50
+      );
 
   if (
     error
   ) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(
-          error.message
-        )}
+        ${
+          esc(
+            error.message
+          )
+        }
       </div>
     `;
 
@@ -4817,51 +5268,62 @@ async function loadInventoryHistory() {
             >
 
               <h3>
-                ${esc(
-                  product
-                    ?.product_name ||
-                  "Product"
-                )}
+                ${
+                  esc(
+                    product
+                      ?.product_name ||
+                    "Product"
+                  )
+                }
               </h3>
 
               <p>
-
-                <span class="tag">
+                <span
+                  class="tag"
+                >
 
                   ${
-                    change > 0
+                    change >
+                    0
                       ? "+"
                       : ""
                   }
 
-                  ${esc(
-                    formatQuantity(
-                      change
+                  ${
+                    esc(
+                      formatQuantity(
+                        change
+                      )
                     )
-                  )}
+                  }
 
-                  ${esc(
-                    product
-                      ?.unit ||
-                    ""
-                  )}
+                  ${
+                    esc(
+                      product
+                        ?.unit ||
+                      ""
+                    )
+                  }
 
                 </span>
-
               </p>
 
               <p class="meta">
-                ${esc(
-                  transaction
-                    .transaction_date
-                )}
-                ·
-                ${esc(
-                  humanize(
+                ${
+                  esc(
                     transaction
-                      .transaction_type
+                      .transaction_date
                   )
-                )}
+                }
+                ·
+                ${
+                  esc(
+                    humanize(
+                      transaction
+                        .transaction_type
+                    )
+                  )
+                }
               </p>
 
               ${
@@ -4870,10 +5332,12 @@ async function loadInventoryHistory() {
                   ? `
                     <p>
                       Supplier:
-                      ${esc(
-                        transaction
-                          .supplier
-                      )}
+                      ${
+                        esc(
+                          transaction
+                            .supplier
+                        )
+                      }
                     </p>
                   `
                   : ""
@@ -4884,10 +5348,12 @@ async function loadInventoryHistory() {
                   .reason
                   ? `
                     <p>
-                      ${esc(
-                        transaction
-                          .reason
-                      )}
+                      ${
+                        esc(
+                          transaction
+                            .reason
+                        )
+                      }
                     </p>
                   `
                   : ""
@@ -4898,10 +5364,12 @@ async function loadInventoryHistory() {
                   .notes
                   ? `
                     <p class="meta">
-                      ${esc(
-                        transaction
-                          .notes
-                      )}
+                      ${
+                        esc(
+                          transaction
+                            .notes
+                        )
+                      }
                     </p>
                   `
                   : ""
@@ -4923,22 +5391,27 @@ function productOptions(
         <option
           value="${product.id}"
         >
-          ${esc(
-            product
-              .product_name
-          )}
-          —
-          ${esc(
-            formatQuantity(
+          ${
+            esc(
               product
-                .quantity ??
-              0
+                .product_name
             )
-          )}
-          ${esc(
-            product.unit ||
-            ""
-          )}
+          }
+          —
+          ${
+            esc(
+              formatQuantity(
+                product.quantity ??
+                0
+              )
+            )
+          }
+          ${
+            esc(
+              product.unit ||
+              ""
+            )
+          }
         </option>
       `
     )
@@ -4946,14 +5419,696 @@ function productOptions(
 }
 
 /* =====================================================
-   STANDARD PAGE SPECS
+   STAFF
+   ===================================================== */
+
+async function renderStaff(
+  page
+) {
+  const canEdit =
+    canCurrentUserEditProfiles();
+
+  page.innerHTML = `
+    <div class="heading">
+
+      <h2>
+        Staff
+      </h2>
+
+      ${
+        canEdit
+          ? `
+            <span
+              class="tag"
+            >
+              Profile editing enabled
+            </span>
+          `
+          : ""
+      }
+
+    </div>
+
+    ${
+      canEdit
+        ? `
+          <form
+            id="staff-edit-form"
+            class="form hidden"
+          >
+
+            <h3>
+              Edit Staff Profile
+            </h3>
+
+            <input
+              id="staff-edit-id"
+              type="hidden"
+            >
+
+            <div
+              class="form-grid"
+            >
+
+              <label>
+                Full Name
+
+                <input
+                  id="staff-edit-name"
+                  type="text"
+                >
+              </label>
+
+              <label>
+                Email
+
+                <input
+                  id="staff-edit-email"
+                  type="email"
+                  readonly
+                >
+              </label>
+
+              <label>
+                Phone
+
+                <input
+                  id="staff-edit-phone"
+                  type="tel"
+                >
+              </label>
+
+              <label>
+                Position
+
+                <input
+                  id="staff-edit-position"
+                  type="text"
+                >
+              </label>
+
+              <label>
+                Role
+
+                <select
+                  id="staff-edit-role"
+                  required
+                >
+
+                  <option
+                    value="admin"
+                  >
+                    Admin
+                  </option>
+
+                  <option
+                    value="superintendent"
+                  >
+                    Superintendent
+                  </option>
+
+                  <option
+                    value="assistant"
+                  >
+                    Assistant
+                  </option>
+
+                  <option
+                    value="mechanic"
+                  >
+                    Mechanic
+                  </option>
+
+                  <option
+                    value="applicator"
+                  >
+                    Applicator
+                  </option>
+
+                  <option
+                    value="crew"
+                  >
+                    Crew
+                  </option>
+
+                  <option
+                    value="read_only"
+                  >
+                    Read Only
+                  </option>
+
+                </select>
+              </label>
+
+            </div>
+
+            <p class="meta">
+              Email is controlled by
+              the user's Supabase
+              Authentication account
+              and cannot be changed
+              here.
+            </p>
+
+            <div
+              style="
+                display:flex;
+                gap:10px;
+                flex-wrap:wrap;
+              "
+            >
+
+              <button
+                type="submit"
+                class="primary"
+              >
+                Save Changes
+              </button>
+
+              <button
+                id="cancel-staff-edit"
+                type="button"
+              >
+                Cancel
+              </button>
+
+            </div>
+
+            <p
+              id="staff-edit-message"
+            ></p>
+
+          </form>
+        `
+        : ""
+    }
+
+    <section
+      id="staff-list"
+      class="list"
+    ></section>
+  `;
+
+  if (
+    canEdit
+  ) {
+    document
+      .querySelector(
+        "#staff-edit-form"
+      )
+      .addEventListener(
+        "submit",
+        saveStaffProfile
+      );
+
+    document
+      .querySelector(
+        "#cancel-staff-edit"
+      )
+      .addEventListener(
+        "click",
+        closeStaffEditForm
+      );
+  }
+
+  await loadStaffCards();
+}
+
+async function loadStaffCards() {
+  const box =
+    document.querySelector(
+      "#staff-list"
+    );
+
+  if (
+    !box
+  ) {
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="empty">
+      Loading staff…
+    </div>
+  `;
+
+  const {
+    data,
+    error
+  } =
+    await db
+      .from(
+        "profiles"
+      )
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        position,
+        role,
+        active
+      `)
+      .order(
+        "full_name"
+      );
+
+  if (
+    error
+  ) {
+    box.innerHTML = `
+      <div class="empty">
+        ${
+          esc(
+            error.message
+          )
+        }
+      </div>
+    `;
+
+    return;
+  }
+
+  if (
+    !data?.length
+  ) {
+    box.innerHTML = `
+      <div class="empty">
+        No staff found.
+      </div>
+    `;
+
+    return;
+  }
+
+  const canEdit =
+    canCurrentUserEditProfiles();
+
+  box.innerHTML =
+    data
+      .map(
+        row => `
+          <article
+            class="card row"
+          >
+
+            <div>
+
+              <h3>
+                ${
+                  esc(
+                    row.full_name ||
+                    row.email ||
+                    "Staff"
+                  )
+                }
+              </h3>
+
+              <p>
+                <span
+                  class="tag"
+                >
+                  ${
+                    esc(
+                      row.position ||
+                      humanize(
+                        row.role ||
+                        "crew"
+                      )
+                    )
+                  }
+                </span>
+
+                ${
+                  row.position &&
+                  row.role
+                    ? `
+                      <span
+                        class="tag"
+                      >
+                        ${
+                          esc(
+                            humanize(
+                              row.role
+                            )
+                          )
+                        }
+                      </span>
+                    `
+                    : ""
+                }
+              </p>
+
+              <p class="meta">
+                ${
+                  esc(
+                    [
+                      row.phone,
+                      row.email
+                    ]
+                      .filter(
+                        Boolean
+                      )
+                      .join(
+                        " · "
+                      )
+                  )
+                }
+              </p>
+
+            </div>
+
+            ${
+              canEdit
+                ? `
+                  <button
+                    class="primary edit-staff-profile"
+                    data-id="${
+                      row.id
+                    }"
+                    type="button"
+                  >
+                    Edit
+                  </button>
+                `
+                : ""
+            }
+
+          </article>
+        `
+      )
+      .join("");
+
+  if (
+    !canEdit
+  ) {
+    return;
+  }
+
+  box
+    .querySelectorAll(
+      ".edit-staff-profile"
+    )
+    .forEach(
+      button => {
+        button.addEventListener(
+          "click",
+          () => {
+            const profile =
+              data.find(
+                item =>
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    button
+                      .dataset
+                      .id
+                  )
+              );
+
+            if (
+              profile
+            ) {
+              openStaffEditForm(
+                profile
+              );
+            }
+          }
+        );
+      }
+    );
+}
+
+function openStaffEditForm(
+  profile
+) {
+  if (
+    !canCurrentUserEditProfiles()
+  ) {
+    return;
+  }
+
+  const form =
+    document.querySelector(
+      "#staff-edit-form"
+    );
+
+  if (
+    !form
+  ) {
+    return;
+  }
+
+  document
+    .querySelector(
+      "#staff-edit-id"
+    )
+    .value =
+    profile.id;
+
+  document
+    .querySelector(
+      "#staff-edit-name"
+    )
+    .value =
+    profile.full_name ||
+    "";
+
+  document
+    .querySelector(
+      "#staff-edit-email"
+    )
+    .value =
+    profile.email ||
+    "";
+
+  document
+    .querySelector(
+      "#staff-edit-phone"
+    )
+    .value =
+    profile.phone ||
+    "";
+
+  document
+    .querySelector(
+      "#staff-edit-position"
+    )
+    .value =
+    profile.position ||
+    "";
+
+  document
+    .querySelector(
+      "#staff-edit-role"
+    )
+    .value =
+    profile.role ||
+    "crew";
+
+  document
+    .querySelector(
+      "#staff-edit-message"
+    )
+    .textContent =
+    "";
+
+  form
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  form.scrollIntoView({
+    behavior:
+      "smooth",
+
+    block:
+      "start"
+  });
+}
+
+function closeStaffEditForm() {
+  const form =
+    document.querySelector(
+      "#staff-edit-form"
+    );
+
+  if (
+    !form
+  ) {
+    return;
+  }
+
+  form.reset();
+
+  form
+    .classList
+    .add(
+      "hidden"
+    );
+
+  const message =
+    document.querySelector(
+      "#staff-edit-message"
+    );
+
+  if (
+    message
+  ) {
+    message.textContent =
+      "";
+  }
+}
+
+async function saveStaffProfile(
+  event
+) {
+  event.preventDefault();
+
+  const message =
+    document.querySelector(
+      "#staff-edit-message"
+    );
+
+  if (
+    !canCurrentUserEditProfiles()
+  ) {
+    message.textContent =
+      "You do not have permission to edit staff profiles.";
+
+    return;
+  }
+
+  const id =
+    document
+      .querySelector(
+        "#staff-edit-id"
+      )
+      .value;
+
+  if (
+    !id
+  ) {
+    message.textContent =
+      "No staff profile selected.";
+
+    return;
+  }
+
+  const role =
+    document
+      .querySelector(
+        "#staff-edit-role"
+      )
+      .value;
+
+  const validRoles = [
+    "admin",
+    "superintendent",
+    "assistant",
+    "mechanic",
+    "applicator",
+    "crew",
+    "read_only"
+  ];
+
+  if (
+    !validRoles.includes(
+      role
+    )
+  ) {
+    message.textContent =
+      "Invalid staff role.";
+
+    return;
+  }
+
+  message.textContent =
+    "Saving…";
+
+  const payload = {
+    full_name:
+      nullable(
+        "staff-edit-name"
+      ),
+
+    phone:
+      nullable(
+        "staff-edit-phone"
+      ),
+
+    position:
+      nullable(
+        "staff-edit-position"
+      ),
+
+    role
+  };
+
+  const {
+    error
+  } =
+    await db
+      .from(
+        "profiles"
+      )
+      .update(
+        payload
+      )
+      .eq(
+        "id",
+        id
+      );
+
+  if (
+    error
+  ) {
+    message.textContent =
+      error.message;
+
+    return;
+  }
+
+  /*
+    If the logged-in user edited
+    their own profile, refresh their
+    role immediately.
+  */
+
+  if (
+    state.currentProfile?.id ===
+    id
+  ) {
+    await loadCurrentProfile(
+      id
+    );
+  }
+
+  closeStaffEditForm();
+
+  await renderStaff(
+    document.querySelector(
+      "#page"
+    )
+  );
+}
+
+/* =====================================================
+   STANDARD CRUD PAGE SPECS
    ===================================================== */
 
 const specs = {
   tasks: {
-    title: "Tasks",
-    table: "tasks",
-    order: "created_at",
+    title:
+      "Tasks",
+
+    table:
+      "tasks",
+
+    order:
+      "created_at",
 
     fields: [
       [
@@ -4985,10 +6140,22 @@ const specs = {
         "Priority",
         "select",
         [
-          ["low", "Low"],
-          ["medium", "Medium"],
-          ["high", "High"],
-          ["urgent", "Urgent"]
+          [
+            "low",
+            "Low"
+          ],
+          [
+            "medium",
+            "Medium"
+          ],
+          [
+            "high",
+            "High"
+          ],
+          [
+            "urgent",
+            "Urgent"
+          ]
         ]
       ],
 
@@ -4997,12 +6164,18 @@ const specs = {
         "Status",
         "select",
         [
-          ["open", "Open"],
+          [
+            "open",
+            "Open"
+          ],
           [
             "in_progress",
             "In Progress"
           ],
-          ["done", "Done"]
+          [
+            "done",
+            "Done"
+          ]
         ]
       ],
 
@@ -5022,30 +6195,40 @@ const specs = {
     display:
       row => `
         <h3>
-          ${esc(
-            row.title
-          )}
+          ${
+            esc(
+              row.title
+            )
+          }
         </h3>
 
         <p class="meta">
-          ${esc(
-            [
-              row.course,
-              row.area,
-              row.assigned_to
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          )}
+          ${
+            esc(
+              [
+                row.course,
+                row.area,
+                row.assigned_to
+              ]
+                .filter(
+                  Boolean
+                )
+                .join(
+                  " · "
+                )
+            )
+          }
         </p>
 
         ${
           row.description
             ? `
               <p>
-                ${esc(
-                  row.description
-                )}
+                ${
+                  esc(
+                    row.description
+                  )
+                }
               </p>
             `
             : ""
@@ -5053,22 +6236,30 @@ const specs = {
 
         <p>
 
-          <span class="tag">
-            ${esc(
-              humanize(
-                row.priority ||
-                "medium"
+          <span
+            class="tag"
+          >
+            ${
+              esc(
+                humanize(
+                  row.priority ||
+                  "medium"
+                )
               )
-            )}
+            }
           </span>
 
-          <span class="tag">
-            ${esc(
-              humanize(
-                row.status ||
-                "open"
+          <span
+            class="tag"
+          >
+            ${
+              esc(
+                humanize(
+                  row.status ||
+                  "open"
+                )
               )
-            )}
+            }
           </span>
 
         </p>
@@ -5076,9 +6267,14 @@ const specs = {
   },
 
   jobs: {
-    title: "Job Board",
-    table: "jobs",
-    order: "created_at",
+    title:
+      "Job Board",
+
+    table:
+      "jobs",
+
+    order:
+      "created_at",
 
     fields: [
       [
@@ -5116,10 +6312,22 @@ const specs = {
         "Priority",
         "select",
         [
-          ["low", "Low"],
-          ["medium", "Medium"],
-          ["high", "High"],
-          ["urgent", "Urgent"]
+          [
+            "low",
+            "Low"
+          ],
+          [
+            "medium",
+            "Medium"
+          ],
+          [
+            "high",
+            "High"
+          ],
+          [
+            "urgent",
+            "Urgent"
+          ]
         ]
       ],
 
@@ -5128,12 +6336,18 @@ const specs = {
         "Status",
         "select",
         [
-          ["open", "Open"],
+          [
+            "open",
+            "Open"
+          ],
           [
             "in_progress",
             "In Progress"
           ],
-          ["done", "Done"]
+          [
+            "done",
+            "Done"
+          ]
         ]
       ],
 
@@ -5153,53 +6367,70 @@ const specs = {
     display:
       row => `
         <h3>
-          ${esc(
-            row.title
-          )}
+          ${
+            esc(
+              row.title
+            )
+          }
         </h3>
 
         <p class="meta">
-          ${esc(
-            [
-              row.job_type,
-              row.course,
-              row.area,
-              row.assigned_to
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          )}
+          ${
+            esc(
+              [
+                row.job_type,
+                row.course,
+                row.area,
+                row.assigned_to
+              ]
+                .filter(
+                  Boolean
+                )
+                .join(
+                  " · "
+                )
+            )
+          }
         </p>
 
         ${
           row.description
             ? `
               <p>
-                ${esc(
-                  row.description
-                )}
+                ${
+                  esc(
+                    row.description
+                  )
+                }
               </p>
             `
             : ""
         }
 
         <p>
-          <span class="tag">
-            ${esc(
-              humanize(
-                row.status ||
-                "open"
+          <span
+            class="tag"
+          >
+            ${
+              esc(
+                humanize(
+                  row.status ||
+                  "open"
+                )
               )
-            )}
+            }
           </span>
         </p>
       `
   },
 
   calendar: {
-    title: "Calendar",
+    title:
+      "Calendar",
+
     table:
       "calendar_entries",
+
     order:
       "start_date",
 
@@ -5215,24 +6446,35 @@ const specs = {
         "Entry Type",
         "select",
         [
-          ["event", "Event"],
+          [
+            "event",
+            "Event"
+          ],
+
           [
             "staff_day_off",
             "Staff Day Off"
           ],
+
           [
             "maintenance",
             "Maintenance"
           ],
+
           [
             "tournament",
             "Tournament"
           ],
+
           [
             "delivery",
             "Delivery"
           ],
-          ["other", "Other"]
+
+          [
+            "other",
+            "Other"
+          ]
         ]
       ],
 
@@ -5264,35 +6506,45 @@ const specs = {
     display:
       row => `
         <h3>
-          ${esc(
-            row.title
-          )}
+          ${
+            esc(
+              row.title
+            )
+          }
         </h3>
 
         <p class="meta">
-          ${esc(
-            row.start_date
-          )}
+
+          ${
+            esc(
+              row.start_date
+            )
+          }
 
           ${
             row.end_date
               ? `
                 –
-                ${esc(
-                  row.end_date
-                )}
+                ${
+                  esc(
+                    row.end_date
+                  )
+                }
               `
               : ""
           }
 
           ·
 
-          ${esc(
-            humanize(
-              row.entry_type ||
-              "event"
+          ${
+            esc(
+              humanize(
+                row.entry_type ||
+                "event"
+              )
             )
-          )}
+          }
+
         </p>
 
         ${
@@ -5300,9 +6552,11 @@ const specs = {
             ? `
               <p>
                 Staff:
-                ${esc(
-                  row.staff_member
-                )}
+                ${
+                  esc(
+                    row.staff_member
+                  )
+                }
               </p>
             `
             : ""
@@ -5312,9 +6566,11 @@ const specs = {
           row.description
             ? `
               <p>
-                ${esc(
-                  row.description
-                )}
+                ${
+                  esc(
+                    row.description
+                  )
+                }
               </p>
             `
             : ""
@@ -5323,8 +6579,12 @@ const specs = {
   },
 
   equipment: {
-    title: "Equipment",
-    table: "equipment",
+    title:
+      "Equipment",
+
+    table:
+      "equipment",
+
     order:
       "equipment_name",
 
@@ -5368,11 +6628,16 @@ const specs = {
             "operational",
             "Operational"
           ],
+
           [
             "needs_repair",
             "Needs Repair"
           ],
-          ["down", "Down"]
+
+          [
+            "down",
+            "Down"
+          ]
         ]
       ],
 
@@ -5398,60 +6663,79 @@ const specs = {
     display:
       row => `
         <h3>
-          ${esc(
-            row.equipment_name
-          )}
+          ${
+            esc(
+              row.equipment_name
+            )
+          }
         </h3>
 
         <p class="meta">
-          ${esc(
-            [
-              row.manufacturer,
-              row.model,
+          ${
+            esc(
+              [
+                row.manufacturer,
+                row.model,
 
-              row.fleet_number
-                ? `Fleet #${row.fleet_number}`
-                : null
-            ]
-              .filter(Boolean)
-              .join(" · ")
-          )}
+                row.fleet_number
+                  ? `Fleet #${row.fleet_number}`
+                  : null
+              ]
+                .filter(
+                  Boolean
+                )
+                .join(
+                  " · "
+                )
+            )
+          }
         </p>
 
         <p>
-          <span class="tag">
-            ${esc(
-              humanize(
-                row.status ||
-                "operational"
+          <span
+            class="tag"
+          >
+            ${
+              esc(
+                humanize(
+                  row.status ||
+                  "operational"
+                )
               )
-            )}
+            }
           </span>
         </p>
 
         ${
-          row.hours != null
+          row.hours !=
+          null
             ? `
               <p>
                 Hours:
-                ${esc(
-                  formatQuantity(
-                    row.hours
+                ${
+                  esc(
+                    formatQuantity(
+                      row.hours
+                    )
                   )
-                )}
+                }
               </p>
             `
             : ""
         }
 
         ${
-          row.next_service_date
+          row
+            .next_service_date
             ? `
               <p>
                 Next Service:
-                ${esc(
-                  row.next_service_date
-                )}
+                ${
+                  esc(
+                    row
+                      .next_service_date
+                  )
+                }
               </p>
             `
             : ""
@@ -5461,9 +6745,11 @@ const specs = {
           row.notes
             ? `
               <p>
-                ${esc(
-                  row.notes
-                )}
+                ${
+                  esc(
+                    row.notes
+                  )
+                }
               </p>
             `
             : ""
@@ -5472,9 +6758,12 @@ const specs = {
   },
 
   notes: {
-    title: "Notes",
+    title:
+      "Notes",
+
     table:
       "daily_notes",
+
     order:
       "note_date",
 
@@ -5501,9 +6790,12 @@ const specs = {
     display:
       row => `
         <h3>
-          ${esc(
-            row.note_date
-          )}
+
+          ${
+            esc(
+              row.note_date
+            )
+          }
 
           ${
             row.category
@@ -5511,26 +6803,31 @@ const specs = {
                 <span
                   class="tag"
                 >
-                  ${esc(
-                    row.category
-                  )}
+                  ${
+                    esc(
+                      row.category
+                    )
+                  }
                 </span>
               `
               : ""
           }
+
         </h3>
 
         <p>
-          ${esc(
-            row.note_text
-          )}
+          ${
+            esc(
+              row.note_text
+            )
+          }
         </p>
       `
   }
 };
 
 /* =====================================================
-   GENERIC ADD / EDIT / DELETE
+   GENERIC CRUD
    ===================================================== */
 
 async function renderCrud(
@@ -5541,7 +6838,9 @@ async function renderCrud(
     null;
 
   page.innerHTML = `
-    <div class="heading">
+    <div
+      class="heading"
+    >
 
       <h2>
         ${spec.title}
@@ -5562,7 +6861,9 @@ async function renderCrud(
       class="form hidden"
     >
 
-      <div class="form-grid">
+      <div
+        class="form-grid"
+      >
 
         ${
           spec.fields
@@ -5656,7 +6957,8 @@ async function renderCrud(
     );
 
   function resetForm() {
-    editingId = null;
+    editingId =
+      null;
 
     form.reset();
 
@@ -5680,12 +6982,16 @@ async function renderCrud(
       "";
   }
 
-  function beginEdit(row) {
+  function beginEdit(
+    row
+  ) {
     editingId =
       row.id;
 
     for (
-      const [key]
+      const [
+        key
+      ]
       of spec.fields
     ) {
       const element =
@@ -5694,7 +7000,9 @@ async function renderCrud(
             key
           );
 
-      if (!element) {
+      if (
+        !element
+      ) {
         continue;
       }
 
@@ -5702,14 +7010,19 @@ async function renderCrud(
         row[key];
 
       element.value =
-        value == null
+        value ==
+        null
           ? ""
-          : String(value);
+          : String(
+              value
+            );
     }
 
-    form.classList.remove(
-      "hidden"
-    );
+    form
+      .classList
+      .remove(
+        "hidden"
+      );
 
     saveButton.textContent =
       "Save Changes";
@@ -5724,8 +7037,11 @@ async function renderCrud(
       "Editing existing record";
 
     form.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
+      behavior:
+        "smooth",
+
+      block:
+        "start"
     });
   }
 
@@ -5739,9 +7055,11 @@ async function renderCrud(
           resetForm();
         }
 
-        form.classList.toggle(
-          "hidden"
-        );
+        form
+          .classList
+          .toggle(
+            "hidden"
+          );
       }
     );
 
@@ -5777,21 +7095,27 @@ async function renderCrud(
             );
 
         let value =
-          element.value.trim();
+          element.value
+            .trim();
 
         if (
-          value === ""
+          value ===
+          ""
         ) {
-          value = null;
+          value =
+            null;
         }
 
         if (
           type ===
             "number" &&
-          value !== null
+          value !==
+            null
         ) {
           value =
-            Number(value);
+            Number(
+              value
+            );
         }
 
         payload[key] =
@@ -5824,7 +7148,9 @@ async function renderCrud(
         result.error
       ) {
         message.textContent =
-          result.error.message;
+          result
+            .error
+            .message;
 
         return;
       }
@@ -5871,7 +7197,8 @@ async function loadRecords(
       .order(
         spec.order,
         {
-          ascending: false
+          ascending:
+            false
         }
       );
 
@@ -5880,9 +7207,11 @@ async function loadRecords(
   ) {
     box.innerHTML = `
       <div class="empty">
-        ${esc(
-          error.message
-        )}
+        ${
+          esc(
+            error.message
+          )
+        }
       </div>
     `;
 
@@ -5910,9 +7239,11 @@ async function loadRecords(
           >
 
             <div>
-              ${spec.display(
-                row
-              )}
+              ${
+                spec.display(
+                  row
+                )
+              }
             </div>
 
             <div
@@ -5925,7 +7256,9 @@ async function loadRecords(
 
               <button
                 class="primary edit-record"
-                data-id="${row.id}"
+                data-id="${
+                  row.id
+                }"
                 type="button"
               >
                 Edit
@@ -5933,7 +7266,9 @@ async function loadRecords(
 
               <button
                 class="delete delete-record"
-                data-id="${row.id}"
+                data-id="${
+                  row.id
+                }"
                 type="button"
               >
                 Delete
@@ -5972,7 +7307,9 @@ async function loadRecords(
               row &&
               onEdit
             ) {
-              onEdit(row);
+              onEdit(
+                row
+              );
             }
           }
         );
@@ -6032,121 +7369,6 @@ async function loadRecords(
 }
 
 /* =====================================================
-   STAFF
-   ===================================================== */
-
-async function renderStaff(
-  page
-) {
-  page.innerHTML = `
-    <div class="heading">
-      <h2>
-        Staff
-      </h2>
-    </div>
-
-    <section
-      id="staff-list"
-      class="list"
-    ></section>
-  `;
-
-  const {
-    data,
-    error
-  } =
-    await db
-      .from(
-        "profiles"
-      )
-      .select("*")
-      .order(
-        "full_name"
-      );
-
-  const box =
-    document.querySelector(
-      "#staff-list"
-    );
-
-  if (
-    error
-  ) {
-    box.innerHTML = `
-      <div class="empty">
-        ${esc(
-          error.message
-        )}
-      </div>
-    `;
-
-    return;
-  }
-
-  if (
-    !data?.length
-  ) {
-    box.innerHTML = `
-      <div class="empty">
-        No staff found.
-      </div>
-    `;
-
-    return;
-  }
-
-  box.innerHTML =
-    data
-      .map(
-        row => `
-          <article
-            class="card"
-          >
-
-            <h3>
-              ${esc(
-                row.full_name ||
-                row.email ||
-                "Staff"
-              )}
-            </h3>
-
-            <p>
-              <span
-                class="tag"
-              >
-                ${esc(
-                  row.position ||
-                  humanize(
-                    row.role ||
-                    "crew"
-                  )
-                )}
-              </span>
-            </p>
-
-            <p class="meta">
-              ${esc(
-                [
-                  row.phone,
-                  row.email
-                ]
-                  .filter(
-                    Boolean
-                  )
-                  .join(
-                    " · "
-                  )
-              )}
-            </p>
-
-          </article>
-        `
-      )
-      .join("");
-}
-
-/* =====================================================
    HELPERS
    ===================================================== */
 
@@ -6196,9 +7418,13 @@ function fieldHtml(
                   optionText
                 ]) => `
                   <option
-                    value="${optionValue}"
+                    value="${
+                      optionValue
+                    }"
                   >
-                    ${optionText}
+                    ${
+                      optionText
+                    }
                   </option>
                 `
               )
@@ -6256,9 +7482,11 @@ function cards(
               <article
                 class="card"
               >
-                ${renderer(
-                  row
-                )}
+                ${
+                  renderer(
+                    row
+                  )
+                }
               </article>
             `
           )
@@ -6269,7 +7497,9 @@ function cards(
   `;
 }
 
-function nullable(id) {
+function nullable(
+  id
+) {
   const element =
     document.querySelector(
       `#${id}`
@@ -6282,10 +7512,12 @@ function nullable(id) {
   }
 
   const value =
-    element.value.trim();
+    element.value
+      .trim();
 
   return (
-    value === ""
+    value ===
+    ""
       ? null
       : value
   );
@@ -6306,10 +7538,12 @@ function nullableNumber(
   }
 
   const value =
-    element.value.trim();
+    element.value
+      .trim();
 
   if (
-    value === ""
+    value ===
+    ""
   ) {
     return null;
   }
@@ -6363,20 +7597,25 @@ function timeToMinutes(
         0,
         5
       )
-      .split(":");
+      .split(
+        ":"
+      );
 
   const hours =
     Number(
       parts[0]
-    ) || 0;
+    ) ||
+    0;
 
   const minutes =
     Number(
       parts[1]
-    ) || 0;
+    ) ||
+    0;
 
   return (
-    hours * 60 +
+    hours *
+      60 +
     minutes
   );
 }
@@ -6399,8 +7638,12 @@ function formatTimeForDisplay(
         0,
         5
       )
-      .split(":")
-      .map(Number);
+      .split(
+        ":"
+      )
+      .map(
+        Number
+      );
 
   const date =
     new Date(
@@ -6417,19 +7660,23 @@ function formatTimeForDisplay(
       {
         hour:
           "numeric",
+
         minute:
           "2-digit"
       }
     );
 }
 
-function formatDate(date) {
+function formatDate(
+  date
+) {
   const year =
     date.getFullYear();
 
   const month =
     String(
-      date.getMonth() + 1
+      date.getMonth() +
+      1
     ).padStart(
       2,
       "0"
@@ -6461,13 +7708,18 @@ function formatDisplayDate(
     day
   ] =
     dateString
-      .split("-")
-      .map(Number);
+      .split(
+        "-"
+      )
+      .map(
+        Number
+      );
 
   const date =
     new Date(
       year,
-      month - 1,
+      month -
+        1,
       day
     );
 
@@ -6477,8 +7729,10 @@ function formatDisplayDate(
       {
         month:
           "short",
+
         day:
           "numeric",
+
         year:
           "numeric"
       }
@@ -6511,7 +7765,9 @@ function formatQuantity(
     );
 }
 
-function humanize(value) {
+function humanize(
+  value
+) {
   return String(
     value ||
     ""
@@ -6523,15 +7779,19 @@ function humanize(value) {
     .replace(
       /\b\w/g,
       letter =>
-        letter.toUpperCase()
+        letter
+          .toUpperCase()
     );
 }
 
-function esc(value) {
+function esc(
+  value
+) {
   const div =
-    document.createElement(
-      "div"
-    );
+    document
+      .createElement(
+        "div"
+      );
 
   div.textContent =
     value ??
